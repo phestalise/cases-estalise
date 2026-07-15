@@ -1,0 +1,33 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Qualquer pessoa pode ler produtos ativos e configurações da loja
+    match /produtos/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
+    }
+
+    match /configuracoes_loja/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
+    }
+
+    // Usuário pode ler e escrever apenas o próprio perfil
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admin pode ler todos os usuários
+      allow read: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
+    }
+
+    // Pedidos: usuário vê apenas os seus; admin vê todos
+    match /pedidos/{docId} {
+      allow read: if request.auth != null && 
+        (resource.data.user_id == request.auth.uid || 
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true);
+      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow update: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
+    }
+  }
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Carrinho — Estalise</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<div class="container">
+  <h1 style="padding-top:40px">Carrinho</h1>
+  <div class="cart-layout">
+    <div id="lista-carrinho"></div>
+    <div id="resumo-carrinho"></div>
+  </div>
+</div>
+
+<div id="site-footer" class="site-footer"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/firebaseClient.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/cartPage.js"></script>
+<script>
+  renderLayout("carrinho");
+  renderizarCarrinho();
+</script>
+</body>
+</html>

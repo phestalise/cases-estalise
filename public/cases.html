@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ver Cases e Pastas — Estalise</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<section class="section container">
+  <div class="section-head">
+    <h2>Catálogo</h2>
+    <div class="filters">
+      <button class="filter-chip" data-tipo="todos" onclick="aplicarFiltro('todos')">Todos</button>
+      <button class="filter-chip" data-tipo="case" onclick="aplicarFiltro('case')">Cases</button>
+      <button class="filter-chip" data-tipo="pasta" onclick="aplicarFiltro('pasta')">Pastas</button>
+    </div>
+  </div>
+  <div id="catalogo" class="grid">
+    <p class="empty-state">Carregando produtos...</p>
+  </div>
+</section>
+
+<div id="site-footer" class="site-footer"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/firebaseClient.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/products.js"></script>
+<script>
+  const tipoUrl = new URLSearchParams(location.search).get("tipo");
+  renderLayout(tipoUrl === "pasta" ? "pastas" : "cases");
+  carregarCatalogo();
+</script>
+</body>
+</html>

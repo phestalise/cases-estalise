@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Painel Administrativo — Estalise</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="brand">
+      <span style="font-family:var(--font-display);font-size:18px">Painel do Gestor</span>
+      <div style="color:var(--gray);font-size:12px;margin-top:4px" id="admin-nome"></div>
+    </div>
+    <nav class="admin-nav">
+      <a href="#" data-aba="dashboard" class="active" onclick="trocarAba('dashboard')">Dashboard</a>
+      <a href="#" data-aba="pedidos" onclick="trocarAba('pedidos')">Pedidos</a>
+      <a href="#" data-aba="produtos" onclick="trocarAba('produtos')">Produtos</a>
+      <a href="#" data-aba="config" onclick="trocarAba('config')">Identidade visual</a>
+      <a href="#" onclick="handleLogout()" style="margin-top:24px;color:var(--danger)">Sair</a>
+    </nav>
+  </aside>
+
+  <main class="admin-main">
+    <div id="tab-dashboard" class="admin-tab">
+      <h1 style="margin-bottom:24px">Visão geral</h1>
+      <div id="stats" class="stat-cards"></div>
+    </div>
+
+    <div id="tab-pedidos" class="admin-tab hidden">
+      <h1 style="margin-bottom:24px">Pedidos</h1>
+      <div id="lista-pedidos-admin"></div>
+    </div>
+
+    <div id="tab-produtos" class="admin-tab hidden">
+      <h1 style="margin-bottom:24px">Produtos</h1>
+      <div id="lista-produtos-admin"></div>
+    </div>
+
+    <div id="tab-config" class="admin-tab hidden"></div>
+  </main>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+
+<script src="js/config.js"></script>
+
+<script src="js/firebase-config.js"></script>
+
+<script src="js/admin.js"></script>
+<script>
+  (async () => {
+    const ok = await checkAdmin();
+    if (ok) carregarDashboard();
+  })();
+</script>
+</body>
+</html>
