@@ -59,3 +59,5 @@ async function getSessaoAtual() {
   const token = await user.getIdToken();
   return { user, access_token: token };
 }
+
+

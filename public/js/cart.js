@@ -1,5 +1,8 @@
 // js/cart.js
-// (IDÊNTICO ao seu código original – não precisei mexer em nada)
+
+// =========================================================
+// GERENCIAMENTO DO CARRINHO
+// =========================================================
 const CART_KEY = "cp_carrinho";
 
 function getCarrinho() {
@@ -79,3 +82,63 @@ function atualizarBadgeCarrinho() {
 }
 
 document.addEventListener("DOMContentLoaded", atualizarBadgeCarrinho);
+
+// =========================================================
+// INTEGRAÇÃO COM CLOUD FUNCTION DO SUPERFRETE
+// =========================================================
+
+/**
+ * Chama a Cloud Function que calcula o frete.
+ * A Cloud Function usa o token do SuperFrete de forma segura.
+ */
+async function calcularFreteCloud(cepDestino, peso, altura, largura, comprimento, valorDeclarado) {
+  const url = `${window.APP_CONFIG.FUNCTIONS_URL}/calcularFrete`; // ou /calcular, conforme nome da função
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cepDestino,
+        peso,
+        altura,
+        largura,
+        comprimento,
+        valorDeclarado
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Erro na Cloud Function:", error);
+    alert("Não foi possível calcular o frete. Tente novamente.");
+    return null;
+  }
+}
+
+/**
+ * Função de conveniência para calcular frete do carrinho.
+ */
+async function calcularFreteCarrinho(cepDestino) {
+  const itens = getCarrinho();
+  if (itens.length === 0) {
+    alert("Carrinho vazio.");
+    return null;
+  }
+
+  // Dimensões médias (ajuste conforme seus produtos)
+  const pesoPorItem = 0.2;   // 200g
+  const altura = 2;          // cm
+  const largura = 15;        // cm
+  const comprimento = 20;    // cm
+
+  const quantidadeTotal = itens.reduce((soma, i) => soma + i.quantidade, 0);
+  const pesoTotal = pesoPorItem * quantidadeTotal;
+  const valorDeclarado = calcularSubtotal();
+
+  return calcularFreteCloud(cepDestino, pesoTotal, altura, largura, comprimento, valorDeclarado);
+}

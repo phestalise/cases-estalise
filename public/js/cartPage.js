@@ -1,3 +1,8 @@
+// js/cartPage.js
+// Depende de: cart.js (getCarrinho, salvarCarrinho, calcularSubtotal, calcularFreteCarrinho)
+
+const PLACEHOLDER_CART = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" fill="%23f0f0f0"/><text x="50%25" y="55%25" dominant-baseline="middle" text-anchor="middle" fill="%23999" font-size="14">📷</text></svg>';
+
 let freteSelecionado = null;
 
 function renderizarCarrinho() {
@@ -5,62 +10,59 @@ function renderizarCarrinho() {
   const listaEl = document.getElementById("lista-carrinho");
   const resumoEl = document.getElementById("resumo-carrinho");
 
-  if (!itens.length) {
-    listaEl.innerHTML = `<div class="empty-state">Seu carrinho está vazio. <br><a href="cases.html" class="btn btn-outline" style="margin-top:16px">Ver produtos</a></div>`;
+  if (itens.length === 0) {
+    listaEl.innerHTML = `<p class="empty-state">Seu carrinho está vazio.</p>`;
     resumoEl.innerHTML = "";
     return;
   }
 
-  listaEl.innerHTML = itens
-    .map(
-      (item) => `
-    <div class="cart-item">
-      <div class="thumb-sm">${item.imagem_url ? `<img src="${item.imagem_url}" style="width:100%;height:100%;object-fit:cover">` : ""}</div>
-      <div>
-        <strong>${item.nome}</strong>
-        <div class="meta">
-          ${item.is_personalizado ? `Personalizado · ${item.cor} · "${item.texto_personalizado}"` : "Padrão, sem personalização"}
-        </div>
-        <div class="meta">${formatarMoeda(item.preco_unitario)} un.</div>
-        <div class="qty-control" style="margin-top:8px">
-          <button onclick="mudarQtd('${item.id_temp}', -1)">−</button>
-          <span>${item.quantidade}</span>
-          <button onclick="mudarQtd('${item.id_temp}', 1)">+</button>
-        </div>
-        <button class="remove" onclick="removerItem('${item.id_temp}')">Remover</button>
+  listaEl.innerHTML = itens.map((item) => `
+    <div class="cart-item" data-id="${item.id_temp}">
+      <div class="cart-item-thumb">
+        <img src="${item.imagem || PLACEHOLDER_CART}" alt="${item.nome || 'Produto'}" />
       </div>
-      <div><strong>${formatarMoeda(item.preco_unitario * item.quantidade)}</strong></div>
+      <div class="cart-item-info">
+        <strong>${item.nome || "Produto"}</strong>
+        ${item.is_personalizado ? `<span class="cart-item-meta">Cor: ${item.cor} — "${item.texto_personalizado}"</span>` : ""}
+        <span class="cart-item-price">R$ ${item.preco_unitario.toFixed(2)}</span>
+      </div>
+      <div class="cart-item-qtd">
+        <button onclick="alterarQtd('${item.id_temp}', -1)">−</button>
+        <span>${item.quantidade}</span>
+        <button onclick="alterarQtd('${item.id_temp}', 1)">+</button>
+      </div>
+      <button class="cart-item-remove" onclick="removerItem('${item.id_temp}')">Remover</button>
     </div>
-  `
-    )
-    .join("");
-
-  const subtotal = calcularSubtotal();
+  `).join("");
 
   resumoEl.innerHTML = `
-    <div class="summary-box">
-      <h3 style="margin-bottom:20px">Resumo</h3>
+    <div class="resumo-box">
+      <p class="resumo-subtotal">Subtotal: <strong>R$ ${calcularSubtotal().toFixed(2)}</strong></p>
 
-      <div class="option-group">
-        <label class="title">Calcular frete</label>
-        <div class="flex gap-8">
-          <input type="text" id="input-cep" class="field" placeholder="00000-000" maxlength="9" />
-          <button class="btn btn-outline" onclick="calcularFrete()">Calcular</button>
-        </div>
-        <div id="opcoes-frete" class="shipping-options"></div>
+      <label for="cep-input">CEP de entrega</label>
+      <div class="cep-row">
+        <input type="text" id="cep-input" placeholder="00000-000" maxlength="9" />
+        <button id="btn-calcular-frete" class="btn btn-secondary">Calcular</button>
       </div>
 
-      <div class="summary-row"><span>Subtotal</span><span>${formatarMoeda(subtotal)}</span></div>
-      <div class="summary-row"><span>Frete</span><span id="valor-frete-label">${freteSelecionado ? formatarMoeda(freteSelecionado.valor) : "A calcular"}</span></div>
-      <div class="summary-row total"><span>Total</span><span id="valor-total-label">${formatarMoeda(subtotal + (freteSelecionado?.valor || 0))}</span></div>
+      <div id="opcoes-frete" class="opcoes-frete"></div>
 
-      <button class="btn btn-primary btn-block" style="margin-top:20px" onclick="irParaCheckout()">Finalizar compra</button>
+      <p id="total-final" class="resumo-total" style="display:none;">
+        Total: <strong id="total-final-valor"></strong>
+      </p>
+
+      <button id="btn-finalizar" class="btn btn-primary btn-block" style="display:none;" onclick="irParaCheckout()">
+        Finalizar compra
+      </button>
     </div>
   `;
+
+  document.getElementById("btn-calcular-frete").addEventListener("click", onCalcularFrete);
 }
 
-function mudarQtd(idTemp, delta) {
-  const item = getCarrinho().find((i) => i.id_temp === idTemp);
+function alterarQtd(idTemp, delta) {
+  const itens = getCarrinho();
+  const item = itens.find((i) => i.id_temp === idTemp);
   if (item) atualizarQuantidade(idTemp, item.quantidade + delta);
   renderizarCarrinho();
 }
@@ -70,80 +72,55 @@ function removerItem(idTemp) {
   renderizarCarrinho();
 }
 
-async function calcularFrete() {
-  const cep = document.getElementById("input-cep").value;
+async function onCalcularFrete() {
+  const cepInput = document.getElementById("cep-input");
+  const cep = cepInput.value.replace(/\D/g, "");
+
+  if (cep.length !== 8) {
+    alert("Digite um CEP válido (8 dígitos).");
+    return;
+  }
+
+  const btn = document.getElementById("btn-calcular-frete");
+  btn.disabled = true;
+  btn.textContent = "Calculando...";
+
+  const resultado = await calcularFreteCarrinho(cep);
+
+  btn.disabled = false;
+  btn.textContent = "Calcular";
+
   const opcoesEl = document.getElementById("opcoes-frete");
 
-  if (!/^\d{5}-?\d{3}$/.test(cep)) {
-    opcoesEl.innerHTML = `<p class="form-error" style="display:block">CEP inválido.</p>`;
+  if (!resultado || !resultado.opcoes || resultado.opcoes.length === 0) {
+    opcoesEl.innerHTML = `<p class="empty-state">Nenhuma opção de frete encontrada para este CEP.</p>`;
     return;
   }
 
-  opcoesEl.innerHTML = `<p style="color:var(--gray);font-size:13px">Calculando...</p>`;
-
-  const itens = getCarrinho().map((i) => ({
-    tipo: i.tipo,
-    quantidade: i.quantidade,
-    valor_unitario: i.preco_unitario,
-  }));
-
-  try {
-    const { data: sessionData } = await supabaseClient.auth.getSession();
-    const resp = await fetch(`${window.APP_CONFIG.SUPABASE_URL}/functions/v1/superfrete-calc`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${sessionData.session?.access_token || window.APP_CONFIG.SUPABASE_ANON_KEY}`,
-        apikey: window.APP_CONFIG.SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({ cep_destino: cep, itens }),
-    });
-
-    const resultado = await resp.json();
-
-    if (!resp.ok || resultado.error) {
-      opcoesEl.innerHTML = `<p class="form-error" style="display:block">Não foi possível calcular o frete agora.</p>`;
-      return;
-    }
-
-    localStorage.setItem("cp_cep_destino", cep);
-
-    opcoesEl.innerHTML = resultado.opcoes
-      .map(
-        (op, idx) => `
-      <div class="shipping-opt" id="frete-opt-${idx}" onclick="selecionarFrete(${idx}, ${JSON.stringify(resultado.opcoes).replace(/"/g, "&quot;")})">
-        <span>${op.servico} · ${op.prazo_dias} dias úteis</span>
-        <strong>${formatarMoeda(op.valor)}</strong>
-      </div>
-    `
-      )
-      .join("");
-  } catch (e) {
-    console.error(e);
-    opcoesEl.innerHTML = `<p class="form-error" style="display:block">Erro ao calcular o frete.</p>`;
-  }
+  opcoesEl.innerHTML = resultado.opcoes.map((op, idx) => `
+    <label class="frete-opcao">
+      <input type="radio" name="frete" value="${idx}"
+        onchange='selecionarFrete(${JSON.stringify(op)})' />
+      <span>${op.nome} — R$ ${Number(op.preco).toFixed(2)} — ${op.prazo_dias} dia(s)</span>
+    </label>
+  `).join("");
 }
 
-function selecionarFrete(idx, opcoes) {
-  freteSelecionado = opcoes[idx];
-  localStorage.setItem("cp_frete_selecionado", JSON.stringify(freteSelecionado));
-
-  document.querySelectorAll(".shipping-opt").forEach((el, i) => el.classList.toggle("selected", i === idx));
-
+function selecionarFrete(opcao) {
+  freteSelecionado = opcao;
   const subtotal = calcularSubtotal();
-  document.getElementById("valor-frete-label").textContent = formatarMoeda(freteSelecionado.valor);
-  document.getElementById("valor-total-label").textContent = formatarMoeda(subtotal + freteSelecionado.valor);
+  const total = subtotal + Number(opcao.preco);
+
+  document.getElementById("total-final").style.display = "block";
+  document.getElementById("total-final-valor").textContent = `R$ ${total.toFixed(2)}`;
+  document.getElementById("btn-finalizar").style.display = "inline-block";
 }
 
-async function irParaCheckout() {
-  const sessao = await getSessaoAtual();
-  if (!sessao) {
-    window.location.href = "login.html?redirect=carrinho.html";
-    return;
-  }
+function irParaCheckout() {
   if (!freteSelecionado) {
-    alert("Calcule e selecione uma opção de frete antes de continuar.");
+    alert("Selecione uma opção de frete antes de continuar.");
     return;
   }
+  sessionStorage.setItem("frete_selecionado", JSON.stringify(freteSelecionado));
   window.location.href = "checkout.html";
 }
