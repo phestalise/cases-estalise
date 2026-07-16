@@ -23,8 +23,7 @@ window.APP_CONFIG = {
 
   },
 
-
   FUNCTIONS_URL:
-  "https://us-central1-cases-estalise.cloudfunctions.net"
+  "https://api-case.vercel.app/api"
 
 };

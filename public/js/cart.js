@@ -84,15 +84,15 @@ function atualizarBadgeCarrinho() {
 document.addEventListener("DOMContentLoaded", atualizarBadgeCarrinho);
 
 // =========================================================
-// INTEGRAÇÃO COM CLOUD FUNCTION DO SUPERFRETE
+// INTEGRAÇÃO COM A API DE FRETE (Vercel)
 // =========================================================
 
 /**
- * Chama a Cloud Function que calcula o frete.
- * A Cloud Function usa o token do SuperFrete de forma segura.
+ * Chama a function serverless que calcula o frete.
+ * O token do SuperFrete fica só no backend (variável de ambiente na Vercel).
  */
 async function calcularFreteCloud(cepDestino, peso, altura, largura, comprimento, valorDeclarado) {
-  const url = `${window.APP_CONFIG.FUNCTIONS_URL}/calcularFrete`; // ou /calcular, conforme nome da função
+  const url = `${window.APP_CONFIG.FUNCTIONS_URL}/frete`;
 
   try {
     const response = await fetch(url, {
@@ -114,7 +114,7 @@ async function calcularFreteCloud(cepDestino, peso, altura, largura, comprimento
     }
     return await response.json();
   } catch (error) {
-    console.error("Erro na Cloud Function:", error);
+    console.error("Erro ao calcular frete:", error);
     alert("Não foi possível calcular o frete. Tente novamente.");
     return null;
   }
