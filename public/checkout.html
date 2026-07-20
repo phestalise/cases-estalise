@@ -73,9 +73,15 @@
 <script src="js/cart.js"></script>
 <script src="js/layout.js"></script>
 <script src="js/checkout.js"></script>
+
 <script>
-  renderLayout("carrinho");
-  initCheckout();
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+    renderLayout("carrinho");
+    initCheckout();
+  }
+);
 </script>
 </body>
 </html>
