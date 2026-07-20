@@ -19,12 +19,12 @@ function renderizarCarrinho() {
   listaEl.innerHTML = itens.map((item) => `
     <div class="cart-item" data-id="${item.id_temp}">
       <div class="cart-item-thumb">
-        <img src="${item.imagem || PLACEHOLDER_CART}" alt="${item.nome || 'Produto'}" />
+        <img src="${item.imagem_url || PLACEHOLDER_CART}" alt="${item.nome || 'Produto'}" />
       </div>
       <div class="cart-item-info">
         <strong>${item.nome || "Produto"}</strong>
         ${item.is_personalizado ? `<span class="cart-item-meta">Cor: ${item.cor} — "${item.texto_personalizado}"</span>` : ""}
-        <span class="cart-item-price">R$ ${item.preco_unitario.toFixed(2)}</span>
+        <span class="cart-item-price">R$ ${Number(item.preco_unitario || 0).toFixed(2)}</span>
       </div>
       <div class="cart-item-qtd">
         <button onclick="alterarQtd('${item.id_temp}', -1)">−</button>
@@ -121,6 +121,18 @@ function irParaCheckout() {
     alert("Selecione uma opção de frete antes de continuar.");
     return;
   }
-  sessionStorage.setItem("frete_selecionado", JSON.stringify(freteSelecionado));
+  const cepInput = document.getElementById("cep-input");
+  const cep = cepInput ? cepInput.value.replace(/\D/g, "") : "";
+
+  // checkout.js espera { servico, valor, prazo_dias } — normaliza os nomes
+  // que vêm da API de frete (nome/preco) antes de salvar.
+  const freteParaCheckout = {
+    servico: freteSelecionado.nome,
+    valor: Number(freteSelecionado.preco),
+    prazo_dias: freteSelecionado.prazo_dias,
+  };
+
+  localStorage.setItem("cp_frete_selecionado", JSON.stringify(freteParaCheckout));
+  localStorage.setItem("cp_cep_destino", cep);
   window.location.href = "checkout.html";
 }
