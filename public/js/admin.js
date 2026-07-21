@@ -61,6 +61,23 @@ async function checkAdmin() {
 }
 
 // =========================================================
+// MENU MOBILE (OFF-CANVAS)
+// =========================================================
+function toggleAdminSidebar(forcarEstado) {
+  const sidebar = document.getElementById("admin-sidebar");
+  const overlay = document.getElementById("admin-overlay");
+  if (!sidebar || !overlay) return;
+
+  const abrir = typeof forcarEstado === "boolean"
+    ? forcarEstado
+    : !sidebar.classList.contains("open");
+
+  sidebar.classList.toggle("open", abrir);
+  overlay.classList.toggle("show", abrir);
+  document.body.style.overflow = abrir ? "hidden" : "";
+}
+
+// =========================================================
 // TROCA DE ABAS
 // =========================================================
 function trocarAba(aba) {
@@ -76,6 +93,9 @@ function trocarAba(aba) {
   if (aba === "produtos") carregarProdutosAdmin();
   if (aba === "config") carregarConfiguracoes();
   if (aba === "dashboard") carregarDashboard();
+
+  // Fecha o menu lateral automaticamente no mobile após escolher a aba
+  toggleAdminSidebar(false);
 }
 
 // =========================================================
@@ -223,10 +243,12 @@ async function carregarProdutosAdmin() {
     });
 
     container.innerHTML = `
-      <table class="admin-table">
-        <thead><tr><th>Imagem</th><th>Nome</th><th>Tipo</th><th>Preço padrão</th><th>Preço personalizado</th><th>Ativo</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Imagem</th><th>Nome</th><th>Tipo</th><th>Preço padrão</th><th>Preço personalizado</th><th>Ativo</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
       <button class="btn btn-primary" style="margin-top:20px" onclick="abrirEdicaoProduto(null)">+ Novo produto</button>
       <div id="form-produto-wrapper" style="margin-top:24px"></div>`;
   } catch (erro) {
@@ -264,7 +286,7 @@ function abrirEdicaoProduto(produtoId) {
   carregar();
 }
 
-// NOVA FUNÇÃO: comprime e redimensiona a imagem usando canvas
+// Comprime e redimensiona a imagem usando canvas
 function comprimirImagem(arquivo, maxWidth = 800, qualidade = 0.6) {
   return new Promise((resolve, reject) => {
     if (!arquivo.type.startsWith("image/")) {
@@ -274,7 +296,6 @@ function comprimirImagem(arquivo, maxWidth = 800, qualidade = 0.6) {
 
     const img = new Image();
     img.onload = () => {
-      // Calcula nova largura/altura mantendo proporção
       let width = img.width;
       let height = img.height;
 
@@ -289,7 +310,6 @@ function comprimirImagem(arquivo, maxWidth = 800, qualidade = 0.6) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Converte para Blob JPEG com a qualidade definida
       canvas.toBlob(
         (blob) => {
           if (blob) {
@@ -334,11 +354,9 @@ async function salvarProduto(produtoId) {
 
     const arquivoImagem = document.getElementById("p-imagem").files[0];
     if (arquivoImagem) {
-      // 1. Comprime a imagem
       const blobComprimido = await comprimirImagem(arquivoImagem, 800, 0.6);
-      if (!blobComprimido) return; // erro já tratado
+      if (!blobComprimido) return;
 
-      // 2. Converte o blob comprimido para Base64
       const base64 = await blobParaBase64(blobComprimido);
       if (!base64) {
         alert("Falha ao processar a imagem.");
