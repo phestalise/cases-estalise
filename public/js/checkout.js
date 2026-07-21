@@ -526,7 +526,7 @@ frete.servico,
 
 
 status:
-"pendente_pagamento",
+"pendente_pagamento/aguardando validação",
 
 
 
