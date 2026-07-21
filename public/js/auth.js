@@ -21,28 +21,29 @@ async function handleCadastro(event) {
   btn.textContent = "Criando conta...";
 
   try {
-    // Cria o usuário no Firebase Auth
     const userCredential = await auth.createUserWithEmailAndPassword(email, senha);
     const user = userCredential.user;
 
-    // Salva os dados extras no Firestore (coleção "usuarios")
     await db.collection("usuarios").doc(user.uid).set({
       nome_completo: nome,
       cpf,
       telefone,
       email,
-      is_admin: false
+      is_admin: false,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     msgEl.textContent = "Conta criada com sucesso!";
     msgEl.className = "form-msg success show";
 
     setTimeout(() => {
-      const redirect = new URLSearchParams(location.search).get("redirect") || "index.html";
+      const redirect = new URLSearchParams(window.location.search).get("redirect") || "index.html";
       window.location.href = redirect;
     }, 1500);
+
   } catch (error) {
-    msgEl.textContent = traduzErroAuth(error.message);
+    console.error(error);
+    msgEl.textContent = traduzErroAuth(error);
     msgEl.className = "form-msg error show";
     btn.disabled = false;
     btn.textContent = "Criar conta";
@@ -63,10 +64,13 @@ async function handleLogin(event) {
 
   try {
     await auth.signInWithEmailAndPassword(email, senha);
-    const redirect = new URLSearchParams(location.search).get("redirect") || "index.html";
+
+    const redirect = new URLSearchParams(window.location.search).get("redirect") || "index.html";
     window.location.href = redirect;
+
   } catch (error) {
-    msgEl.textContent = traduzErroAuth(error.message);
+    console.error(error);
+    msgEl.textContent = traduzErroAuth(error);
     msgEl.className = "form-msg error show";
     btn.disabled = false;
     btn.textContent = "Entrar";
@@ -74,28 +78,44 @@ async function handleLogin(event) {
 }
 
 async function handleLogout() {
-  await auth.signOut();
-  window.location.href = "index.html";
-}
-
-// Recuperação de senha (link na página de login)
-async function handleRecuperarSenha() {
-  const email = prompt("Digite o e-mail da sua conta para receber o link de redefinição:");
-  if (!email) return;
   try {
-    await auth.sendPasswordResetEmail(email, { url: window.location.origin + "/login.html" });
-    alert("E-mail enviado! Verifique sua caixa de entrada (e spam).");
+    await auth.signOut();
+    localStorage.removeItem("cp_frete_selecionado");
+    localStorage.removeItem("cp_cep_destino");
+    window.location.href = "index.html";
   } catch (error) {
-    alert("Erro: " + traduzErroAuth(error.message));
+    console.error(error);
   }
 }
 
-function traduzErroAuth(msg) {
-  const mapa = {
-    "Invalid login credentials": "E-mail ou senha incorretos.",
-    "The email address is already in use by another account.": "Já existe uma conta com este e-mail.",
-    "Password should be at least 6 characters": "A senha deve ter pelo menos 6 caracteres.",
-    "The email address is badly formatted.": "Formato de e-mail inválido."
+async function handleRecuperarSenha() {
+  const email = prompt("Digite o e-mail da sua conta para receber o link de redefinição:");
+  if (!email) return;
+
+  try {
+    await auth.sendPasswordResetEmail(email, {
+      url: window.location.origin + "/login.html"
+    });
+    alert("E-mail enviado! Verifique sua caixa de entrada (e spam).");
+  } catch (error) {
+    console.error(error);
+    alert(traduzErroAuth(error));
+  }
+}
+
+function traduzErroAuth(error) {
+  const code = error.code || "";
+
+  const erros = {
+    "auth/email-already-in-use": "Já existe uma conta com este e-mail.",
+    "auth/invalid-email": "E-mail inválido.",
+    "auth/user-not-found": "Usuário não encontrado.",
+    "auth/wrong-password": "Senha incorreta.",
+    "auth/invalid-credential": "E-mail ou senha incorretos.",
+    "auth/weak-password": "A senha deve possuir pelo menos 6 caracteres.",
+    "auth/too-many-requests": "Muitas tentativas. Tente novamente mais tarde.",
+    "auth/network-request-failed": "Erro de conexão com a internet."
   };
-  return mapa[msg] || msg;
+
+  return erros[code] || error.message || "Ocorreu um erro.";
 }

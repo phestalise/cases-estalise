@@ -1,11 +1,3 @@
-/* =========================================================
-   DESIGN TOKENS
-   Paleta: preto/branco predominante + acento grafite metálico
-   Tipografia: Fraunces (display, serifada, remete a couro/artigos premium)
-              + Inter (corpo/UI)
-   Assinatura visual: linha de "costura" (stitch-line) como divisor,
-   remetendo à costura de cases e pastas de couro.
-   ========================================================= */
 :root {
   --black: #0a0a0a;
   --black-soft: #141414;
@@ -14,7 +6,7 @@
   --white: #fafafa;
   --white-dim: #cfcfcf;
   --gray: #8a8a8a;
-  --accent: #b7b2a8; /* grafite claro / metal escovado, uso mínimo */
+  --accent: #b7b2a8;
   --danger: #d24d4d;
   --success: #4caf6a;
   --warn: #d2a24d;
@@ -28,7 +20,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; }
 
 body {
   background: var(--black);
@@ -42,12 +34,13 @@ body {
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
-input, select, textarea { font-family: inherit; }
+input, select, textarea { font-family: inherit; max-width: 100%; }
 
 .container {
   max-width: var(--container);
   margin: 0 auto;
   padding: 0 24px;
+  width: 100%;
 }
 
 h1, h2, h3, h4 {
@@ -57,7 +50,6 @@ h1, h2, h3, h4 {
   margin: 0;
 }
 
-/* ---------- Stitch divider: assinatura visual ---------- */
 .stitch {
   border: none;
   height: 1px;
@@ -71,7 +63,6 @@ h1, h2, h3, h4 {
   );
 }
 
-/* ---------- Header ---------- */
 .site-header {
   position: sticky;
   top: 0;
@@ -88,6 +79,8 @@ h1, h2, h3, h4 {
   padding: 16px 24px;
   max-width: var(--container);
   margin: 0 auto;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .brand {
@@ -97,9 +90,8 @@ h1, h2, h3, h4 {
 }
 
 .brand img {
-  height: 36px;
+  height: 48px;
   width: auto;
-  filter: grayscale(1) contrast(1.1) brightness(1.05);
 }
 
 .brand span {
@@ -115,6 +107,7 @@ h1, h2, h3, h4 {
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  flex-wrap: wrap;
 }
 
 .nav-links a {
@@ -132,7 +125,7 @@ h1, h2, h3, h4 {
   background: var(--white);
 }
 
-.header-actions { display: flex; align-items: center; gap: 20px; }
+.header-actions { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
 
 .icon-btn {
   position: relative;
@@ -141,6 +134,17 @@ h1, h2, h3, h4 {
   color: var(--white);
   font-size: 20px;
   padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--white);
+  fill: none;
+  stroke-width: 1.6;
 }
 
 .cart-badge {
@@ -155,7 +159,6 @@ h1, h2, h3, h4 {
   display: flex; align-items: center; justify-content: center;
 }
 
-/* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -178,6 +181,21 @@ h1, h2, h3, h4 {
 .btn-outline { background: transparent; color: var(--white); }
 .btn-outline:hover { background: var(--white); color: var(--black); }
 
+.btn-secondary {
+  background: var(--surface);
+  color: var(--white);
+  border: 1px solid var(--accent);
+}
+.btn-secondary:hover {
+  background: var(--accent);
+  color: var(--black);
+  border-color: var(--accent);
+}
+.btn-secondary:disabled:hover {
+  background: var(--surface);
+  color: var(--white);
+}
+
 .btn-ghost {
   border-color: transparent;
   color: var(--white-dim);
@@ -190,7 +208,6 @@ h1, h2, h3, h4 {
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-block { width: 100%; }
 
-/* ---------- Hero ---------- */
 .hero {
   padding: 120px 24px 100px;
   text-align: center;
@@ -223,7 +240,6 @@ h1, h2, h3, h4 {
 
 .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
 
-/* ---------- Product grid ---------- */
 .section { padding: 80px 0; }
 .section-head {
   display: flex;
@@ -244,6 +260,7 @@ h1, h2, h3, h4 {
   color: var(--white-dim);
   background: transparent;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 .filter-chip.active, .filter-chip:hover { border-color: var(--white); color: var(--white); }
 
@@ -285,7 +302,6 @@ h1, h2, h3, h4 {
 .product-card .price { margin-top: auto; padding-top: 12px; font-size: 18px; font-weight: 700; }
 .product-card .price small { font-weight: 400; color: var(--gray); font-size: 12px; display: block; }
 
-/* ---------- Product detail ---------- */
 .product-detail {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -306,7 +322,7 @@ h1, h2, h3, h4 {
 .gallery img { width: 100%; height: 100%; object-fit: cover; }
 
 .detail-info .tag { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--gray); }
-.detail-info h1 { font-size: 38px; margin: 10px 0 16px; }
+.detail-info h1 { font-size: clamp(26px, 5vw, 38px); margin: 10px 0 16px; }
 .detail-info .price { font-size: 26px; font-weight: 700; margin-bottom: 24px; }
 .detail-info .desc { color: var(--white-dim); margin-bottom: 32px; }
 
@@ -320,9 +336,9 @@ h1, h2, h3, h4 {
   margin-bottom: 12px;
 }
 
-.toggle-row { display: flex; gap: 12px; }
+.toggle-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .toggle-row .toggle-opt {
-  flex: 1;
+  flex: 1 1 100px;
   padding: 14px;
   border: 1px solid var(--line);
   text-align: center;
@@ -331,13 +347,14 @@ h1, h2, h3, h4 {
 }
 .toggle-row .toggle-opt.selected { border-color: var(--white); background: var(--surface); }
 
-.color-row { display: flex; gap: 14px; }
+.color-row { display: flex; gap: 14px; flex-wrap: wrap; }
 .color-swatch {
   width: 44px; height: 44px;
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
   position: relative;
+  flex-shrink: 0;
 }
 .color-swatch.selected { border-color: var(--white); }
 .color-swatch[data-color="preto"] { background: #111; }
@@ -365,12 +382,11 @@ h1, h2, h3, h4 {
 }
 .field:focus { outline: none; border-color: var(--white); }
 
-.qty-row { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.qty-row { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
 .qty-control { display: flex; align-items: center; border: 1px solid var(--line); }
 .qty-control button { background: none; border: none; color: var(--white); width: 36px; height: 40px; }
 .qty-control span { width: 36px; text-align: center; }
 
-/* ---------- Cart / Checkout ---------- */
 .cart-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 48px; padding: 60px 0; align-items: start; }
 @media (max-width: 900px) { .cart-layout { grid-template-columns: 1fr; } }
 
@@ -390,6 +406,18 @@ h1, h2, h3, h4 {
 .cart-item .meta { font-size: 13px; color: var(--gray); }
 .cart-item .remove { color: var(--danger); font-size: 12px; margin-top: 6px; background: none; border: none; }
 
+@media (max-width: 520px) {
+  .cart-item {
+    grid-template-columns: 64px 1fr;
+    grid-template-areas:
+      "thumb info"
+      "thumb actions";
+  }
+  .cart-item .thumb-sm { grid-area: thumb; width: 64px; height: 64px; }
+  .cart-item .info { grid-area: info; }
+  .cart-item-qtd, .cart-item .remove { grid-area: actions; }
+}
+
 .summary-box {
   border: 1px solid var(--line);
   padding: 28px;
@@ -405,12 +433,14 @@ h1, h2, h3, h4 {
   padding: 12px 14px;
   font-size: 13px;
   cursor: pointer;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .shipping-opt.selected { border-color: var(--white); }
 
-/* ---------- Forms (auth/checkout) ---------- */
 .form-card {
   max-width: 460px;
+  width: 100%;
   margin: 80px auto;
   padding: 40px;
   border: 1px solid var(--line);
@@ -427,7 +457,6 @@ h1, h2, h3, h4 {
 .form-msg.success { border-color: var(--success); color: var(--success); }
 .form-footer { text-align: center; margin-top: 24px; font-size: 13px; color: var(--gray); }
 
-/* ---------- Status badges ---------- */
 .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
 .badge-pago { background: rgba(76,175,106,0.15); color: var(--success); }
 .badge-producao { background: rgba(210,162,77,0.15); color: var(--warn); }
@@ -435,7 +464,6 @@ h1, h2, h3, h4 {
 .badge-entregue { background: rgba(255,255,255,0.15); color: var(--white); }
 .badge-pendente { background: rgba(210,77,77,0.15); color: var(--danger); }
 
-/* ---------- Admin ---------- */
 .admin-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
 .admin-sidebar {
   background: var(--black-soft);
@@ -472,7 +500,6 @@ h1, h2, h3, h4 {
 .logo-uploader img { height: 60px; margin: 0 auto 16px; }
 .select { padding: 12px 14px; background: var(--black-soft); border: 1px solid var(--line); color: var(--white); }
 
-/* ---------- Footer ---------- */
 .site-footer {
   border-top: 1px solid var(--line);
   padding: 48px 0 24px;
@@ -481,7 +508,6 @@ h1, h2, h3, h4 {
 }
 .footer-grid { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 24px; margin-bottom: 32px; }
 
-/* ---------- Utility ---------- */
 .hidden { display: none !important; }
 .flex { display: flex; }
 .gap-8 { gap: 8px; }
@@ -494,4 +520,14 @@ h1, h2, h3, h4 {
   .nav-links { order: 3; width: 100%; justify-content: center; padding-top: 12px; border-top: 1px solid var(--line); margin-top: 12px; overflow-x: auto; }
   .admin-shell { grid-template-columns: 1fr; }
   .admin-sidebar { display: none; }
+  .btn { padding: 12px 20px; }
+  .cep-row { flex-wrap: wrap; }
+  .toggle-row { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .hero { padding: 80px 16px 60px; }
+  .form-card { padding: 24px; margin: 40px auto; }
+  .product-detail { padding: 32px 0; }
+  .grid { grid-template-columns: 1fr; }
 }

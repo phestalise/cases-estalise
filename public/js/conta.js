@@ -19,13 +19,21 @@ async function initConta() {
   document.getElementById("perfil-nome").textContent = perfil?.nome_completo || user.email;
   document.getElementById("perfil-email").textContent = user.email;
 
-  // Busca pedidos
-  const snapshot = await db.collection("pedidos")
-    .where("user_id", "==", user.uid)
-    .orderBy("created_at", "desc")
-    .get();
-
   const listaEl = document.getElementById("lista-pedidos");
+
+  // Busca pedidos (com tratamento de erro para não travar a tela
+  // caso o índice composto ainda não exista ou esteja sendo criado)
+  let snapshot;
+  try {
+    snapshot = await db.collection("pedidos")
+      .where("user_id", "==", user.uid)
+      .orderBy("created_at", "desc")
+      .get();
+  } catch (err) {
+    console.error("Erro ao buscar pedidos:", err);
+    listaEl.innerHTML = `<p class="empty-state">Não foi possível carregar seus pedidos no momento. Tente novamente em instantes.</p>`;
+    return;
+  }
 
   if (snapshot.empty) {
     listaEl.innerHTML = `<p class="empty-state">Você ainda não fez nenhum pedido.</p>`;

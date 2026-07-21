@@ -35,7 +35,7 @@ async function renderLayout(paginaAtiva) {
         <div class="header-actions">
           <a href="${logado ? "conta.html" : "login.html"}" class="icon-btn" title="${logado ? "Minha conta" : "Entrar"}">👤</a>
           <a href="carrinho.html" class="icon-btn" title="Carrinho">
-            🛍️
+            🛒
             <span id="cart-badge" class="cart-badge">0</span>
           </a>
         </div>

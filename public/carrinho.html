@@ -35,7 +35,23 @@
 
 <script>
   renderLayout("carrinho");
-  renderizarCarrinho();
+
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      document.getElementById("lista-carrinho").innerHTML = `
+        <div class="empty-state">
+          <h3>Faça login para acessar o carrinho</h3>
+          <a class="btn btn-primary" href="login.html?redirect=carrinho.html">Entrar</a>
+          <br><br>
+          <a class="btn btn-secondary" href="cadastro.html?redirect=carrinho.html">Criar Conta</a>
+        </div>
+      `;
+      document.getElementById("resumo-carrinho").innerHTML = "";
+      return;
+    }
+
+    renderizarCarrinho();
+  });
 </script>
 </body>
 </html>
