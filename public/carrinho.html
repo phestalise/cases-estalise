@@ -13,7 +13,17 @@
 
 <div class="container">
   <h1 style="padding-top:40px">Carrinho</h1>
-  <div class="cart-layout">
+
+  <div id="auth-gate" class="auth-gate" hidden>
+    <h3>Faça login para acessar o carrinho</h3>
+    <p style="color:var(--gray);font-size:14px;margin:0">Entre na sua conta para ver seus itens.</p>
+    <div class="auth-actions">
+      <a class="btn btn-primary btn-block" href="login.html?redirect=carrinho.html">Entrar</a>
+      <a class="btn btn-secondary btn-block" href="cadastro.html?redirect=carrinho.html">Criar Conta</a>
+    </div>
+  </div>
+
+  <div class="cart-layout" id="cart-layout">
     <div id="lista-carrinho"></div>
     <div id="resumo-carrinho"></div>
   </div>
@@ -37,19 +47,17 @@
   renderLayout("carrinho");
 
   auth.onAuthStateChanged((user) => {
+    const authGate = document.getElementById("auth-gate");
+    const cartLayout = document.getElementById("cart-layout");
+
     if (!user) {
-      document.getElementById("lista-carrinho").innerHTML = `
-        <div class="empty-state">
-          <h3>Faça login para acessar o carrinho</h3>
-          <a class="btn btn-primary" href="login.html?redirect=carrinho.html">Entrar</a>
-          <br><br>
-          <a class="btn btn-secondary" href="cadastro.html?redirect=carrinho.html">Criar Conta</a>
-        </div>
-      `;
-      document.getElementById("resumo-carrinho").innerHTML = "";
+      authGate.hidden = false;
+      cartLayout.hidden = true;
       return;
     }
 
+    authGate.hidden = true;
+    cartLayout.hidden = false;
     renderizarCarrinho();
   });
 </script>
