@@ -8,6 +8,8 @@ const STATUS_LABEL = {
   cancelado: { texto: "Cancelado", classe: "badge-pendente" },
 };
 
+const DIAS_PRODUCAO = 15;
+
 async function initConta() {
   const user = await exigirLogin("conta.html");
   if (!user) return;
@@ -41,22 +43,37 @@ async function initConta() {
   }
 
   let html = `<table class="admin-table">
-    <thead><tr><th>Pedido</th><th>Data</th><th>Status</th><th>Envio</th><th>Total</th></tr></thead><tbody>`;
+    <thead><tr><th>Pedido</th><th>Data</th><th>Status</th><th>Envio</th><th>Previsão</th><th>Total</th></tr></thead><tbody>`;
 
   snapshot.forEach(doc => {
     const p = doc.data();
     const status = STATUS_LABEL[p.status] || { texto: p.status, classe: "badge-pendente" };
     const data = p.created_at ? p.created_at.toDate().toLocaleDateString("pt-BR") : "-";
+    const previsao = calcularPrevisao(p);
+
     html += `
       <tr>
         <td>#${doc.id.slice(0, 8)}</td>
         <td>${data}</td>
         <td><span class="badge ${status.classe}">${status.texto}</span></td>
         <td>${p.metodo_envio || "-"}${p.codigo_rastreio ? ` · ${p.codigo_rastreio}` : ""}</td>
+        <td>${previsao}</td>
         <td>${formatarMoeda(p.total)}</td>
       </tr>`;
   });
 
   html += `</tbody></table>`;
   listaEl.innerHTML = html;
+}
+
+// Calcula a previsão de entrega (data do pedido + 15 dias de produção).
+// Se o pedido já foi enviado/entregue/cancelado, não faz sentido mostrar previsão.
+function calcularPrevisao(pedido) {
+  if (!pedido.created_at) return "-";
+  if (["enviado", "entregue", "cancelado"].includes(pedido.status)) return "-";
+
+  const dataPrevisao = pedido.created_at.toDate();
+  dataPrevisao.setDate(dataPrevisao.getDate() + DIAS_PRODUCAO);
+
+  return dataPrevisao.toLocaleDateString("pt-BR");
 }
