@@ -24,6 +24,18 @@ let adminUserId = null;
 const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" fill="%23ccc"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="20">📷</text></svg>';
 
 // =========================================================
+// SANITIZAÇÃO — impede XSS ao injetar dados de usuário via innerHTML
+// =========================================================
+function escapeHtml(valor) {
+  return String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// =========================================================
 // CONTROLE DE ACESSO ADMIN
 // =========================================================
 async function checkAdmin() {
@@ -150,8 +162,8 @@ async function carregarPedidosAdmin() {
       }
 
       const itensHtml = (p.itens || []).map(item => `
-        <li>${item.quantidade || 1}x ${item.nome || "Produto"} ${item.tipo ? `(${item.tipo})` : ""}
-        ${item.is_personalizado && item.personalizacao ? `— Personalizado: "${item.personalizacao.texto_personalizado || ""}" Cor: ${item.personalizacao.cor || "-"}` : " — Padrão"}
+        <li>${escapeHtml(item.quantidade || 1)}x ${escapeHtml(item.nome || "Produto")} ${item.tipo ? `(${escapeHtml(item.tipo)})` : ""}
+        ${item.is_personalizado && item.personalizacao ? `— Personalizado: "${escapeHtml(item.personalizacao.texto_personalizado || "")}" Cor: ${escapeHtml(item.personalizacao.cor || "-")}` : " — Padrão"}
         — ${formatarMoeda(item.preco_unitario || 0)}</li>`).join("");
 
       const endereco = p.endereco || {};
@@ -160,7 +172,7 @@ async function carregarPedidosAdmin() {
       pedidosHtml.push(`
         <div class="summary-box" style="margin-bottom:20px">
           <div class="section-head" style="margin-bottom:12px">
-            <div><strong>Pedido #${doc.id.slice(0,8)}</strong><div style="color:var(--gray);font-size:12px">${data}</div></div>
+            <div><strong>Pedido #${escapeHtml(doc.id.slice(0,8))}</strong><div style="color:var(--gray);font-size:12px">${escapeHtml(data)}</div></div>
             <select class="select" onchange="atualizarStatusPedido('${doc.id}', this.value)">
               ${STATUS_OPCOES.map(status => `<option value="${status}" ${status === p.status ? "selected" : ""}>${STATUS_LABEL_ADMIN[status]}</option>`).join("")}
             </select>
@@ -168,22 +180,22 @@ async function carregarPedidosAdmin() {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; font-size:14px">
             <div>
               <strong>Cliente</strong>
-              <p>${cliente.nome_completo || "-"}<br>CPF: ${cliente.cpf || "-"}<br>Tel: ${cliente.telefone || "-"}</p>
+              <p>${escapeHtml(cliente.nome_completo || "-")}<br>CPF: ${escapeHtml(cliente.cpf || "-")}<br>Tel: ${escapeHtml(cliente.telefone || "-")}</p>
               <strong>Endereço</strong>
-              <p>${endereco.logradouro || ""}, ${endereco.numero || ""} — ${endereco.bairro || ""}, ${endereco.cidade || ""}/${endereco.uf || ""} — CEP: ${endereco.cep || ""}</p>
+              <p>${escapeHtml(endereco.logradouro || "")}, ${escapeHtml(endereco.numero || "")} — ${escapeHtml(endereco.bairro || "")}, ${escapeHtml(endereco.cidade || "")}/${escapeHtml(endereco.uf || "")} — CEP: ${escapeHtml(endereco.cep || "")}</p>
             </div>
             <div>
               <strong>Itens</strong><ul style="margin:6px 0 12px 18px">${itensHtml}</ul>
               <strong>Pagamento</strong>
-              <p>${p.pagamento ? `${p.pagamento.status || "-"} · ${p.pagamento.metodo || "-"} · ${formatarMoeda(p.pagamento.valor || 0)}` : "Não registrado"}</p>
+              <p>${p.pagamento ? `${escapeHtml(p.pagamento.status || "-")} · ${escapeHtml(p.pagamento.metodo || "-")} · ${formatarMoeda(p.pagamento.valor || 0)}` : "Não registrado"}</p>
               <strong>Frete</strong>
-              <p>${p.metodo_envio || "-"} · ${formatarMoeda(p.valor_frete || 0)}</p>
+              <p>${escapeHtml(p.metodo_envio || "-")} · ${formatarMoeda(p.valor_frete || 0)}</p>
             </div>
           </div>
           <div class="form-group" style="margin-top:16px">
             <label>Código de rastreio</label>
             <div class="flex gap-8">
-              <input type="text" class="field" id="rastreio-${doc.id}" value="${p.codigo_rastreio || ""}" placeholder="BR123456789BR" />
+              <input type="text" class="field" id="rastreio-${doc.id}" value="${escapeHtml(p.codigo_rastreio || "")}" placeholder="BR123456789BR" />
               <button class="btn btn-outline" onclick="salvarRastreio('${doc.id}')">Salvar</button>
             </div>
           </div>
@@ -233,8 +245,8 @@ async function carregarProdutosAdmin() {
       rows += `
         <tr>
           <td><img src="${imgSrc}" style="width:48px;height:48px;object-fit:cover;border-radius:8px" /></td>
-          <td>${p.nome || "-"}</td>
-          <td>${p.tipo || "-"}</td>
+          <td>${escapeHtml(p.nome || "-")}</td>
+          <td>${escapeHtml(p.tipo || "-")}</td>
           <td>${formatarMoeda(p.preco_padrao || 0)}</td>
           <td>${formatarMoeda(p.preco_personalizado || 0)}</td>
           <td>${p.ativo ? "Sim" : "Não"}</td>
@@ -269,9 +281,9 @@ function abrirEdicaoProduto(produtoId) {
     wrapper.innerHTML = `
       <div class="summary-box">
         <h3>${produtoId ? "Editar produto" : "Novo produto"}</h3>
-        <div class="form-group"><label>Nome</label><input id="p-nome" class="field" value="${produto?.nome || ""}" /></div>
+        <div class="form-group"><label>Nome</label><input id="p-nome" class="field" value="${escapeHtml(produto?.nome || "")}" /></div>
         <div class="form-group"><label>Tipo</label><select id="p-tipo" class="select"><option value="case" ${produto?.tipo === "case" ? "selected" : ""}>Case</option><option value="pasta" ${produto?.tipo === "pasta" ? "selected" : ""}>Pasta</option></select></div>
-        <div class="form-group"><label>Descrição</label><input id="p-descricao" class="field" value="${produto?.descricao || ""}" /></div>
+        <div class="form-group"><label>Descrição</label><input id="p-descricao" class="field" value="${escapeHtml(produto?.descricao || "")}" /></div>
         <div class="flex gap-8">
           <div class="form-group" style="flex:1"><label>Preço padrão</label><input type="number" step="0.01" id="p-preco-padrao" class="field" value="${produto?.preco_padrao || ""}" /></div>
           <div class="form-group" style="flex:1"><label>Preço personalizado</label><input type="number" step="0.01" id="p-preco-personalizado" class="field" value="${produto?.preco_personalizado || ""}" /></div>
