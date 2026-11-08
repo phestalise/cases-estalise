@@ -110,6 +110,11 @@ function renderResumoCheckout() {
       <strong>R$ ${total.toFixed(2)}</strong>
     </div>
 
+    <div class="prazo-resumo">
+      <span>⏳ Produção: até <strong>15 dias</strong></span>
+      ${Number(frete.prazo_dias) > 0 ? `<span>🚚 Entrega (${escaparTexto(frete.servico || "frete")}): até <strong>${Number(frete.prazo_dias)} dia(s)</strong> após o envio</span>` : ""}
+    </div>
+
     <div class="form-group" style="margin-top:20px;margin-bottom:0">
       <label>Cupom de desconto</label>
       ${cupomCheckout ? `

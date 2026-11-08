@@ -1807,3 +1807,17 @@ html.intro-feita .hero > * { animation: none; }
   #lista-admins td { vertical-align: top; }
   #lista-admins td:last-child .btn { padding: 8px 0; font-size: 11px; white-space: normal; }
 }
+
+
+/* Prazo de produção no checkout */
+.prazo-producao { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 8px; border-color: rgba(201,169,122,0.45); }
+.prazo-producao .prazo-ico { font-size: 22px; line-height: 1.2; }
+.prazo-resumo {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 16px; padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  font-size: 13px; color: var(--white-dim);
+}
+.prazo-resumo strong { color: var(--white); }
+.bf-economia strong { white-space: nowrap; }
