@@ -121,6 +121,8 @@ function trocarAba(aba) {
   if (aba === "cupons") carregarCuponsAdmin();
   if (aba === "config" && typeof carregarConfiguracoes === "function") carregarConfiguracoes();
   if (aba === "dashboard") carregarDashboard();
+  if (aba === "perfil") carregarPerfil();
+  if (aba === "admins") carregarAdmins();
 
   // Fecha o menu lateral automaticamente no mobile após escolher a aba
   toggleAdminSidebar(false);
@@ -679,5 +681,218 @@ async function excluirCupom(codigo) {
   } catch (erro) {
     console.error(erro);
     alert("Erro ao excluir cupom.");
+  }
+}
+
+// =========================================================
+// MEU PERFIL
+// A senha nunca é exibida (o Firebase guarda só um hash).
+// Trocar e-mail/senha exige confirmar a senha atual.
+// =========================================================
+function msgPerfil(id, texto, tipo) {
+  const el = document.getElementById(id);
+  if (!el) return alert(texto);
+  el.textContent = texto;
+  el.className = `form-msg ${tipo} show`;
+}
+
+function traduzirErroAuth(erro) {
+  const mapa = {
+    "auth/wrong-password": "Senha atual incorreta.",
+    "auth/invalid-credential": "Senha atual incorreta.",
+    "auth/invalid-login-credentials": "Senha atual incorreta.",
+    "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+    "auth/weak-password": "A nova senha precisa ter pelo menos 6 caracteres.",
+    "auth/email-already-in-use": "Esse e-mail já é usado por outra conta.",
+    "auth/invalid-email": "E-mail inválido.",
+    "auth/requires-recent-login": "Por segurança, saia e entre de novo antes de fazer essa alteração.",
+    "auth/operation-not-allowed": "Troca de e-mail não habilitada no Firebase. Ative a verificação de e-mail no console."
+  };
+  return mapa[erro?.code] || "Não foi possível concluir. Tente novamente.";
+}
+
+async function reautenticar(senhaAtual) {
+  const user = auth.currentUser;
+  const credencial = firebase.auth.EmailAuthProvider.credential(user.email, senhaAtual);
+  await user.reauthenticateWithCredential(credencial);
+  return user;
+}
+
+async function carregarPerfil() {
+  const user = auth.currentUser;
+  if (!user) return;
+  try {
+    const ref = db.collection("usuarios").doc(user.uid);
+    const doc = await ref.get();
+    const p = doc.exists ? doc.data() : {};
+
+    // Se o e-mail foi trocado (após confirmar o link), sincroniza o cadastro
+    if (user.email && p.email !== user.email) {
+      await ref.update({ email: user.email }).catch(() => {});
+    }
+
+    document.getElementById("perfil-nome").value = p.nome_completo || "";
+    document.getElementById("perfil-telefone").value = p.telefone || "";
+    document.getElementById("perfil-cpf").value = p.cpf || "";
+    document.getElementById("perfil-email").value = user.email || "";
+
+    const criado = user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString("pt-BR") : "-";
+    const ultimo = user.metadata?.lastSignInTime ? new Date(user.metadata.lastSignInTime).toLocaleString("pt-BR") : "-";
+    document.getElementById("perfil-conta").innerHTML = `
+      <div><strong style="color:var(--white)">Permissão:</strong> <span class="badge badge-pago">Administrador</span></div>
+      <div><strong style="color:var(--white)">Conta criada em:</strong> ${escapeHtml(criado)}</div>
+      <div><strong style="color:var(--white)">Último acesso:</strong> ${escapeHtml(ultimo)}</div>
+      <div><strong style="color:var(--white)">E-mail verificado:</strong> ${user.emailVerified ? "Sim" : "Não"}</div>`;
+  } catch (erro) {
+    console.error("Erro ao carregar perfil:", erro);
+    msgPerfil("perfil-msg", "Erro ao carregar seu perfil.", "error");
+  }
+}
+
+async function salvarPerfil() {
+  const user = auth.currentUser;
+  const nome = document.getElementById("perfil-nome").value.trim();
+  const telefone = document.getElementById("perfil-telefone").value.trim();
+  if (nome.length < 3) return msgPerfil("perfil-msg", "Informe seu nome completo.", "error");
+  try {
+    await db.collection("usuarios").doc(user.uid).update({ nome_completo: nome, telefone });
+    const nomeAdmin = document.getElementById("admin-nome");
+    if (nomeAdmin) nomeAdmin.textContent = nome;
+    msgPerfil("perfil-msg", "Dados salvos.", "success");
+  } catch (erro) {
+    console.error(erro);
+    msgPerfil("perfil-msg", "Erro ao salvar seus dados.", "error");
+  }
+}
+
+async function trocarEmail() {
+  const novo = document.getElementById("perfil-novo-email").value.trim();
+  const senha = document.getElementById("perfil-senha-email").value;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novo)) return msgPerfil("email-msg", "Informe um e-mail válido.", "error");
+  if (!senha) return msgPerfil("email-msg", "Informe sua senha atual para confirmar.", "error");
+  if (novo.toLowerCase() === (auth.currentUser.email || "").toLowerCase()) return msgPerfil("email-msg", "Esse já é o seu e-mail.", "error");
+  try {
+    const user = await reautenticar(senha);
+    await user.verifyBeforeUpdateEmail(novo);
+    document.getElementById("perfil-senha-email").value = "";
+    msgPerfil("email-msg", `Enviamos um link de confirmação para ${novo}. O e-mail só muda depois que você clicar nele.`, "success");
+  } catch (erro) {
+    console.error(erro);
+    msgPerfil("email-msg", traduzirErroAuth(erro), "error");
+  }
+}
+
+async function trocarSenha() {
+  const atual = document.getElementById("perfil-senha-atual").value;
+  const nova = document.getElementById("perfil-senha-nova").value;
+  const nova2 = document.getElementById("perfil-senha-nova2").value;
+  if (!atual) return msgPerfil("senha-msg", "Informe sua senha atual.", "error");
+  if (nova.length < 6) return msgPerfil("senha-msg", "A nova senha precisa ter pelo menos 6 caracteres.", "error");
+  if (nova !== nova2) return msgPerfil("senha-msg", "As duas senhas novas não são iguais.", "error");
+  if (nova === atual) return msgPerfil("senha-msg", "A nova senha precisa ser diferente da atual.", "error");
+  try {
+    const user = await reautenticar(atual);
+    await user.updatePassword(nova);
+    ["perfil-senha-atual", "perfil-senha-nova", "perfil-senha-nova2"].forEach(id => document.getElementById(id).value = "");
+    msgPerfil("senha-msg", "Senha alterada com sucesso.", "success");
+  } catch (erro) {
+    console.error(erro);
+    msgPerfil("senha-msg", traduzirErroAuth(erro), "error");
+  }
+}
+
+async function enviarLinkSenha() {
+  const email = auth.currentUser?.email;
+  if (!email) return;
+  try {
+    await auth.sendPasswordResetEmail(email);
+    msgPerfil("senha-msg", `Enviamos um link para ${email} para você criar uma nova senha.`, "success");
+  } catch (erro) {
+    console.error(erro);
+    msgPerfil("senha-msg", traduzirErroAuth(erro), "error");
+  }
+}
+
+// =========================================================
+// ADMINISTRADORES
+// Permissão = campo is_admin no cadastro (usuarios/{uid}).
+// As regras do Firestore só deixam um admin alterar o is_admin
+// de OUTRA pessoa (ninguém tira o próprio acesso por engano).
+// =========================================================
+async function carregarAdmins() {
+  const container = document.getElementById("lista-admins");
+  if (!container) return;
+  container.innerHTML = `<p class="empty-state">Carregando...</p>`;
+  try {
+    const snap = await db.collection("usuarios").where("is_admin", "==", true).get();
+    const meuId = auth.currentUser?.uid;
+    const linhas = snap.docs
+      .sort((a, b) => (a.id === meuId ? -1 : b.id === meuId ? 1 : 0))
+      .map(doc => {
+        const u = doc.data();
+        const souEu = doc.id === meuId;
+        return `
+          <tr>
+            <td><strong>${escapeHtml(u.nome_completo || "-")}</strong>${souEu ? ' <span class="badge badge-pago">Você</span>' : ""}</td>
+            <td>${escapeHtml(u.email || "-")}</td>
+            <td>${escapeHtml(u.telefone || "-")}</td>
+            <td style="text-align:right">${souEu
+              ? '<span style="color:var(--gray);font-size:12px">—</span>'
+              : `<button class="btn btn-ghost" style="color:var(--danger)" onclick="removerAdmin('${doc.id}', '${escapeHtml(u.nome_completo || u.email || "")}')">Remover acesso</button>`}</td>
+          </tr>`;
+      }).join("");
+    container.innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th></th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>`;
+  } catch (erro) {
+    console.error("Erro ao carregar administradores:", erro);
+    container.innerHTML = `<p class="empty-state">Erro ao carregar administradores.</p>`;
+  }
+}
+
+async function adicionarAdmin() {
+  const email = document.getElementById("admin-novo-email").value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msgPerfil("admins-msg", "Informe um e-mail válido.", "error");
+  try {
+    let snap = await db.collection("usuarios").where("email", "==", email).limit(1).get();
+    if (snap.empty) {
+      // cadastros antigos podem ter o e-mail com maiúsculas
+      const digitado = document.getElementById("admin-novo-email").value.trim();
+      if (digitado !== email) snap = await db.collection("usuarios").where("email", "==", digitado).limit(1).get();
+    }
+    if (snap.empty) return msgPerfil("admins-msg", "Não há conta na loja com esse e-mail. Peça para a pessoa se cadastrar primeiro.", "error");
+
+    const doc = snap.docs[0];
+    const u = doc.data();
+    if (u.is_admin === true) return msgPerfil("admins-msg", "Essa pessoa já é administradora.", "error");
+    if (!confirm(`Dar acesso de administrador para ${u.nome_completo || email}?\n\nEla poderá ver pedidos e dados de clientes, editar produtos, cupons e outros administradores.`)) return;
+
+    await db.collection("usuarios").doc(doc.id).update({ is_admin: true });
+    document.getElementById("admin-novo-email").value = "";
+    msgPerfil("admins-msg", `${u.nome_completo || email} agora é administrador(a).`, "success");
+    carregarAdmins();
+  } catch (erro) {
+    console.error(erro);
+    msgPerfil("admins-msg", erro?.code === "permission-denied"
+      ? "Sem permissão. Publique as novas regras do Firestore (firestore.rules) no console do Firebase."
+      : "Erro ao dar acesso.", "error");
+  }
+}
+
+async function removerAdmin(uid, nome) {
+  if (uid === auth.currentUser?.uid) return;
+  if (!confirm(`Remover o acesso de administrador de ${nome}?`)) return;
+  try {
+    await db.collection("usuarios").doc(uid).update({ is_admin: false });
+    carregarAdmins();
+  } catch (erro) {
+    console.error(erro);
+    alert(erro?.code === "permission-denied"
+      ? "Sem permissão. Publique as novas regras do Firestore (firestore.rules) no console do Firebase."
+      : "Erro ao remover acesso.");
   }
 }

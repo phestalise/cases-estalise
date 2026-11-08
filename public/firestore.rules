@@ -22,7 +22,7 @@ service cloud.firestore {
     }
 
     // Usuário pode ler e escrever apenas o próprio perfil,
-    // mas NUNCA pode se tornar admin (is_admin só muda pelo console do Firebase).
+    // mas NUNCA pode se tornar admin sozinho (só outro admin ou o console do Firebase).
     match /usuarios/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId
@@ -32,6 +32,13 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
       // Admin pode ler todos os usuários
       allow read: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
+      // Admin pode dar/remover acesso de admin de OUTRA pessoa,
+      // alterando apenas o campo is_admin (nunca a própria conta).
+      allow update: if request.auth != null
+        && request.auth.uid != userId
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_admin'])
+        && request.resource.data.is_admin is bool;
     }
 
     // Pedidos: usuário vê apenas os seus; admin vê todos

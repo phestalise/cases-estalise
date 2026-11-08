@@ -1792,3 +1792,18 @@ html.intro-feita .hero > * { animation: none; }
   backdrop-filter: blur(6px);
   animation: riseIn 0.35s var(--ease-out) both;
 }
+
+
+/* Painel: link do perfil no topo do menu + grade do perfil */
+.admin-perfil-link { color: var(--gray); font-size: 12px; transition: color 0.2s ease; }
+.admin-perfil-link:hover { color: var(--accent-warm); }
+.perfil-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .perfil-grid { grid-template-columns: 1fr; } }
+.admin-sidebar .brand .admin-perfil-link span { font-family: var(--font-body); font-size: 12px; letter-spacing: normal; }
+/* Botões "ghost" em <button> ficavam com o fundo padrão do navegador */
+.btn-ghost { background: transparent; }
+@media (max-width: 720px) {
+  #lista-admins th:nth-child(3), #lista-admins td:nth-child(3) { display: none; }
+  #lista-admins td { vertical-align: top; }
+  #lista-admins td:last-child .btn { padding: 8px 0; font-size: 11px; white-space: normal; }
+}

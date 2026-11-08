@@ -27,7 +27,9 @@
     <button class="sidebar-close" onclick="toggleAdminSidebar(false)" aria-label="Fechar menu">✕</button>
     <div class="brand">
       <span style="font-family:var(--font-display);font-size:18px">Painel do Gestor</span>
-      <div style="color:var(--gray);font-size:12px;margin-top:4px" id="admin-nome"></div>
+      <a href="#" class="admin-perfil-link" onclick="trocarAba('perfil')" title="Ver meu perfil">
+        <span id="admin-nome"></span> <span aria-hidden="true">›</span>
+      </a>
     </div>
     <nav class="admin-nav">
       <a href="#" data-aba="dashboard" class="active" onclick="trocarAba('dashboard')">Dashboard</a>
@@ -35,6 +37,8 @@
       <a href="#" data-aba="produtos" onclick="trocarAba('produtos')">Produtos</a>
       <a href="#" data-aba="cupons" onclick="trocarAba('cupons')">Cupons de desconto</a>
       <a href="#" data-aba="config" onclick="trocarAba('config')">Identidade visual</a>
+      <a href="#" data-aba="admins" onclick="trocarAba('admins')">Administradores</a>
+      <a href="#" data-aba="perfil" onclick="trocarAba('perfil')">Meu perfil</a>
       <a href="index.html" class="admin-voltar-loja" style="margin-top:24px">← Voltar para a loja</a>
       <a href="#" onclick="handleLogout()" style="color:var(--danger)">Sair</a>
     </nav>
@@ -97,6 +101,68 @@
     </div>
 
     <div id="tab-config" class="admin-tab hidden"></div>
+
+    <!-- MEU PERFIL -->
+    <div id="tab-perfil" class="admin-tab hidden">
+      <h1 style="margin-bottom:24px">Meu perfil</h1>
+      <div class="perfil-grid">
+        <div class="summary-box">
+          <h3 style="margin-bottom:16px">Dados pessoais</h3>
+          <div class="form-group"><label>Nome completo</label><input id="perfil-nome" class="field" /></div>
+          <div class="flex gap-8" style="flex-wrap:wrap">
+            <div class="form-group" style="flex:1;min-width:160px"><label>Telefone</label><input id="perfil-telefone" class="field" /></div>
+            <div class="form-group" style="flex:1;min-width:160px"><label>CPF</label><input id="perfil-cpf" class="field" disabled /></div>
+          </div>
+          <button class="btn btn-primary" onclick="salvarPerfil()">Salvar dados</button>
+          <p id="perfil-msg" class="form-msg"></p>
+        </div>
+
+        <div class="summary-box">
+          <h3 style="margin-bottom:16px">E-mail de acesso</h3>
+          <div class="form-group"><label>E-mail atual</label><input id="perfil-email" class="field" disabled /></div>
+          <div class="form-group"><label>Novo e-mail</label><input id="perfil-novo-email" type="email" class="field" placeholder="novo@email.com" /></div>
+          <div class="form-group"><label>Senha atual (para confirmar)</label><input id="perfil-senha-email" type="password" class="field" autocomplete="current-password" /></div>
+          <button class="btn btn-outline" onclick="trocarEmail()">Trocar e-mail</button>
+          <p id="email-msg" class="form-msg"></p>
+        </div>
+
+        <div class="summary-box">
+          <h3 style="margin-bottom:6px">Senha</h3>
+          <p style="color:var(--gray);font-size:13px;margin:0 0 16px">Por segurança, a senha não pode ser exibida (nem para você). Aqui você cria uma nova.</p>
+          <div class="form-group"><label>Senha atual</label><input id="perfil-senha-atual" type="password" class="field" autocomplete="current-password" /></div>
+          <div class="flex gap-8" style="flex-wrap:wrap">
+            <div class="form-group" style="flex:1;min-width:160px"><label>Nova senha</label><input id="perfil-senha-nova" type="password" class="field" autocomplete="new-password" /></div>
+            <div class="form-group" style="flex:1;min-width:160px"><label>Repita a nova senha</label><input id="perfil-senha-nova2" type="password" class="field" autocomplete="new-password" /></div>
+          </div>
+          <div class="flex gap-8" style="flex-wrap:wrap">
+            <button class="btn btn-outline" onclick="trocarSenha()">Trocar senha</button>
+            <button class="btn btn-ghost" onclick="enviarLinkSenha()">Esqueci a senha atual</button>
+          </div>
+          <p id="senha-msg" class="form-msg"></p>
+        </div>
+
+        <div class="summary-box">
+          <h3 style="margin-bottom:16px">Conta</h3>
+          <div id="perfil-conta" style="font-size:14px;color:var(--white-dim);line-height:1.9"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMINISTRADORES -->
+    <div id="tab-admins" class="admin-tab hidden">
+      <h1 style="margin-bottom:8px">Administradores</h1>
+      <p style="color:var(--gray);font-size:14px;margin:0 0 24px">Quem é administrador acessa este painel: vê pedidos e dados de clientes, edita produtos, cupons e outros administradores.</p>
+      <div class="summary-box" style="margin-bottom:24px">
+        <h3 style="margin-bottom:6px">Adicionar administrador</h3>
+        <p style="color:var(--gray);font-size:13px;margin:0 0 16px">A pessoa precisa ter criado uma conta na loja com esse e-mail.</p>
+        <div class="flex gap-8" style="flex-wrap:wrap">
+          <input id="admin-novo-email" type="email" class="field" placeholder="email@exemplo.com" style="flex:1;min-width:220px" />
+          <button class="btn btn-primary" onclick="adicionarAdmin()">Dar acesso</button>
+        </div>
+        <p id="admins-msg" class="form-msg"></p>
+      </div>
+      <div id="lista-admins"></div>
+    </div>
   </main>
 </div>
 
