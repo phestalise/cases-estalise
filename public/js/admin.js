@@ -65,16 +65,13 @@ async function checkAdmin() {
     const perfil = perfilDoc.exists ? perfilDoc.data() : null;
 
     if (!perfil || perfil.is_admin !== true) {
-      document.body.innerHTML = `
-        <div class="form-card text-center">
-          <h1>Acesso restrito</h1>
-          <p class="sub">Esta área é exclusiva para o gestor da loja.</p>
-          <a href="index.html" class="btn btn-outline btn-block">Voltar à loja</a>
-        </div>`;
+      mostrarAcessoRestrito();
       return false;
     }
 
     adminUserId = user.uid;
+    // Só agora o painel fica visível
+    document.documentElement.classList.remove("admin-verificando");
     const nomeAdmin = document.getElementById("admin-nome");
     if (nomeAdmin) {
       nomeAdmin.textContent = perfil.nome_completo || "Administrador";
@@ -82,9 +79,27 @@ async function checkAdmin() {
     return true;
   } catch (erro) {
     console.error("Erro verificando administrador:", erro);
-    alert("Erro ao validar acesso administrativo.");
+    mostrarAcessoRestrito("Não foi possível validar seu acesso. Recarregue a página ou entre novamente.");
     return false;
   }
+}
+
+// Se a verificação travar (sem internet / Firebase fora), não deixa a tela presa
+setTimeout(() => {
+  if (document.documentElement.classList.contains("admin-verificando")) {
+    mostrarAcessoRestrito("Não foi possível verificar seu acesso. Confira sua conexão e recarregue a página.");
+  }
+}, 15000);
+
+function mostrarAcessoRestrito(mensagem) {
+  document.body.innerHTML = `
+    <div class="form-card text-center">
+      <h1>Acesso restrito</h1>
+      <p class="sub">${mensagem || "Esta área é exclusiva para o gestor da loja."}</p>
+      <a href="index.html" class="btn btn-outline btn-block">Voltar à loja</a>
+      <a href="#" onclick="handleLogout()" class="btn btn-ghost btn-block" style="margin-top:8px">Entrar com outra conta</a>
+    </div>`;
+  document.documentElement.classList.remove("admin-verificando");
 }
 
 // =========================================================
