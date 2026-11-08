@@ -1,6 +1,7 @@
 // js/layout.js
 async function renderLayout(paginaAtiva) {
   renderWhatsappFlutuante();
+  aplicarTemaBlackFriday();
   iniciarEfeitos();
 
   let logoUrl = "assets/ESTALISE.png";
@@ -59,6 +60,7 @@ function pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado) {
   if (headerEl) {
     headerEl.classList.add("site-header");
     headerEl.innerHTML = `
+      ${faixaBlackFridayHTML()}
       <div class="header-inner">
         <a href="index.html" class="brand">
           <img src="${logoUrl}" alt="${nomeMarca}" />
@@ -103,7 +105,7 @@ function pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado) {
             <h4>Atendimento</h4>
             ${numeroWhats ? `<p><a href="https://wa.me/${numeroWhats}" target="_blank" rel="noopener">WhatsApp · ${whatsFormatado}</a></p>` : ""}
             <p>Envio para todo o Brasil via PAC e SEDEX.</p>
-            <div class="pay-badges"><span>⚡ Pix</span><span>🔒 Pagamento seguro</span></div>
+            <div class="pay-badges"><span>⚡ Pix</span><span>💳 Cartão</span><span>🔒 Pagamento seguro</span></div>
           </div>
         </div>
         <hr class="stitch" style="margin:24px 0" />
@@ -260,4 +262,123 @@ function dividirTituloHero() {
     }
   });
   h1.classList.add("intro-split");
+}
+
+// Faixa animada da Black Friday no topo (some sozinha quando a
+// promoção é desligada em APP_CONFIG.BLACK_FRIDAY.ativo)
+function faixaBlackFridayHTML() {
+  if (typeof blackFridayAtiva !== "function" || !blackFridayAtiva()) return "";
+  const precos = window.APP_CONFIG.BLACK_FRIDAY.precos_personalizado || {};
+  const fmt = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const partes = ['<strong>BLACK FRIDAY</strong>'];
+  if (precos.case) partes.push(`Cases personalizadas por <strong>${fmt(precos.case)}</strong>`);
+  if (precos.pasta) partes.push(`Pastas personalizadas por <strong>${fmt(precos.pasta)}</strong>`);
+  partes.push("Por tempo limitado");
+  const bloco = partes.map((p) => `<span>${p}</span><i>✦</i>`).join("");
+  return `
+    <a href="cases.html" class="bf-faixa" aria-label="Ver ofertas da Black Friday">
+      <div class="bf-trilho">${bloco}${bloco}${bloco}${bloco}</div>
+    </a>`;
+}
+
+// =========================================================
+// TEMA BLACK FRIDAY
+// Tudo é aplicado por JS: com BLACK_FRIDAY.ativo = false o site
+// volta exatamente ao HTML original.
+// =========================================================
+function aplicarTemaBlackFriday() {
+  if (typeof blackFridayAtiva !== "function" || !blackFridayAtiva()) return;
+  if (document.body.dataset.bfAplicado) return;
+  document.body.dataset.bfAplicado = "1";
+
+  const cfg = window.APP_CONFIG.BLACK_FRIDAY;
+  const precos = cfg.precos_personalizado || {};
+  const fmt = (v) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // ---- HOME: hero
+  const hero = document.querySelector(".hero");
+  if (hero) {
+    const h1 = hero.querySelector("h1");
+    const p = hero.querySelector("p");
+    if (h1) h1.innerHTML = `Black <em>Friday</em><br>na Estalise.`;
+    if (p) {
+      const partes = [];
+      if (precos.case) partes.push(`cases personalizadas por <strong>${fmt(precos.case)}</strong>`);
+      if (precos.pasta) partes.push(`pastas personalizadas por <strong>${fmt(precos.pasta)}</strong>`);
+      p.innerHTML = `Nossa maior oferta do ano: ${partes.join(" e ")}. Com seu nome gravado, feitas à mão. Por tempo limitado.`;
+    }
+    const acoes = hero.querySelectorAll(".hero-actions .btn");
+    if (acoes[0]) acoes[0].textContent = "Comprar Cases";
+    if (acoes[1]) acoes[1].textContent = "Comprar Pastas";
+
+    // Marca d'água gigante (adicionada no fim para não mexer na ordem da animação)
+    const marca = document.createElement("div");
+    marca.className = "bf-marca-dagua";
+    marca.setAttribute("aria-hidden", "true");
+    marca.textContent = "BLACK FRIDAY";
+    hero.appendChild(marca);
+  }
+
+  // ---- HOME: seção de ofertas logo depois da faixa de benefícios
+  const faixaBeneficios = document.querySelector(".trust-strip");
+  if (faixaBeneficios && (precos.case || precos.pasta)) {
+    const oferta = (tipo, titulo, img, link) => precos[tipo] ? `
+      <a href="${link}" class="bf-oferta">
+        <div class="bf-oferta-img"><img src="${img}" alt="${titulo}" loading="lazy" /></div>
+        <div class="bf-oferta-info">
+          <span class="bf-oferta-tag">Black Friday</span>
+          <h3>${titulo}</h3>
+          <p>Personalizadas com seu nome</p>
+          <div class="bf-oferta-preco"><small>por apenas</small>${fmt(precos[tipo])}</div>
+          <span class="btn btn-primary">Aproveitar</span>
+        </div>
+      </a>` : "";
+
+    const secao = document.createElement("section");
+    secao.className = "bf-secao";
+    secao.innerHTML = `
+      <div class="container">
+        <div class="bf-secao-topo">
+          <div>
+            <span class="bf-oferta-tag">Ofertas da semana</span>
+            <h2>Black Friday <em>Estalise</em></h2>
+          </div>
+          <div class="bf-contagem" id="bf-contagem" hidden></div>
+        </div>
+        <div class="bf-ofertas">
+          ${oferta("case", "Cases", "assets/case-marrom.jpg", "cases.html?tipo=case")}
+          ${oferta("pasta", "Pastas", "assets/pasta-bege-quadriculada.jpg", "cases.html?tipo=pasta")}
+        </div>
+      </div>`;
+    faixaBeneficios.after(secao);
+    iniciarContagemBlackFriday(cfg.fim);
+  }
+
+  // ---- CATÁLOGO: faixa acima da grade
+  const catalogo = document.getElementById("catalogo");
+  if (catalogo) {
+    const aviso = document.createElement("div");
+    aviso.className = "bf-aviso-catalogo";
+    aviso.innerHTML = `<strong>Black Friday</strong> · Todos os produtos personalizados com preço especial${precos.case ? ` · Cases por ${fmt(precos.case)}` : ""}${precos.pasta ? ` · Pastas por ${fmt(precos.pasta)}` : ""}`;
+    catalogo.before(aviso);
+  }
+}
+
+function iniciarContagemBlackFriday(fim) {
+  const el = document.getElementById("bf-contagem");
+  const alvo = fim ? new Date(fim).getTime() : NaN;
+  if (!el || !alvo) return;
+  const pad = (n) => String(n).padStart(2, "0");
+  const tick = () => {
+    const resta = alvo - Date.now();
+    if (resta <= 0) { el.hidden = true; return clearInterval(t); }
+    const d = Math.floor(resta / 864e5), h = Math.floor(resta / 36e5) % 24,
+          m = Math.floor(resta / 6e4) % 60, s = Math.floor(resta / 1e3) % 60;
+    el.innerHTML = `<span>Termina em</span>` +
+      [[d, "dias"], [h, "horas"], [m, "min"], [s, "seg"]]
+        .map(([v, l]) => `<div><strong>${pad(v)}</strong><small>${l}</small></div>`).join("");
+    el.hidden = false;
+  };
+  const t = setInterval(tick, 1000);
+  tick();
 }

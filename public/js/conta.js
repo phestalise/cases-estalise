@@ -3,7 +3,7 @@ const STATUS_LABEL = {
   aguardando_pagamento: { texto: "Aguardando pagamento", classe: "badge-pendente" },
   pendente_pagamento: { texto: "Aguardando pagamento", classe: "badge-pendente" },
   pago: { texto: "Pago", classe: "badge-pago" },
-  pago_cartao: { texto: "Em análise", classe: "badge-producao" },
+  pago_cartao: { texto: "Pago", classe: "badge-pago" },
   pago_divergente: { texto: "Em análise", classe: "badge-producao" },
   em_producao: { texto: "Em produção", classe: "badge-producao" },
   enviado: { texto: "Enviado", classe: "badge-enviado" },

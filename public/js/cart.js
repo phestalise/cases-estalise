@@ -11,9 +11,11 @@ function getCarrinho() {
 
   try {
 
-    return JSON.parse(
+    const itens = JSON.parse(
       localStorage.getItem(CART_KEY)
     ) || [];
+
+    return aplicarPromoCarrinho(itens);
 
   } catch {
 
@@ -21,6 +23,26 @@ function getCarrinho() {
 
   }
 
+}
+
+// Black Friday: itens personalizados já no carrinho passam a mostrar o
+// preço promocional; quando a promoção acaba, voltam ao preço normal.
+// (O valor cobrado de verdade é sempre recalculado pela API.)
+function aplicarPromoCarrinho(itens) {
+  const cfg = window.APP_CONFIG?.BLACK_FRIDAY;
+  return itens.map((item) => {
+    if (!item.is_personalizado) return item;
+    const promo = (typeof blackFridayAtiva === "function" ? blackFridayAtiva() : cfg?.ativo) ? Number(cfg.precos_personalizado?.[item.tipo]) : 0;
+    const normal = Number(item.preco_normal ?? item.preco_unitario ?? 0);
+    if (promo > 0 && normal > promo) {
+      return { ...item, preco_normal: normal, preco_unitario: promo };
+    }
+    if (item.preco_normal != null) {
+      const { preco_normal, ...resto } = item;
+      return { ...resto, preco_unitario: Number(preco_normal) };
+    }
+    return item;
+  });
 }
 
 
@@ -426,4 +448,13 @@ async function calcularFreteCarrinho(
   );
 
 
+}
+
+// Quanto o cliente está economizando com a Black Friday
+function calcularEconomiaCarrinho() {
+  return getCarrinho().reduce((total, item) => {
+    if (item.preco_normal == null) return total;
+    const diff = Number(item.preco_normal) - Number(item.preco_unitario || 0);
+    return total + (diff > 0 ? diff * Number(item.quantidade || 1) : 0);
+  }, 0);
 }

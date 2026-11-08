@@ -77,6 +77,24 @@ async function carregarDetalheProduto() {
 
     renderizarDetalhe();
 
+    aplicarModoSomentePersonalizado();
+
+    // Começa com a cor do próprio produto e carrega as fotos das outras cores
+    fotosPorCor = {};
+    const corInicial = corDoNome(produtoAtual.nome);
+    const fotoInicial = produtoAtual.imagem_base64 || produtoAtual.imagem_url;
+    if (corInicial && fotoInicial) fotosPorCor[corInicial] = fotoInicial;
+    if (corInicial) selecionarCor(corInicial);
+    carregarFotosPorCor();
+
+    const promoGaleria = promoPersonalizado(produtoAtual);
+    if (promoGaleria) {
+      document.querySelector(".gallery")?.insertAdjacentHTML(
+        "beforeend",
+        `<span class="bf-fita">Black Friday · -${promoGaleria.pct}%</span>`
+      );
+    }
+
 
 
   } catch(error) {
@@ -257,9 +275,9 @@ Personalizar
 
 <small>
 
-${formatarMoeda(
-Number(p.preco_personalizado || 0)
-)}
+${promoPersonalizado(p)
+  ? htmlPrecoPromo(promoPersonalizado(p), formatarMoeda)
+  : formatarMoeda(Number(p.preco_personalizado || 0))}
 
 </small>
 
@@ -500,7 +518,34 @@ class="form-error"
 // =====================================================
 
 
+// Black Friday: remove a opção "Sem personalização" e já deixa
+// o produto selecionado como personalizado.
+function aplicarModoSomentePersonalizado(){
+
+  if(!somentePersonalizado(produtoAtual) || !produtoAtual.permite_personalizacao)
+    return;
+
+  document.getElementById("opt-padrao")?.remove();
+
+  const opt = document.getElementById("opt-personalizado");
+  if (opt) {
+    opt.removeAttribute("onclick");
+    opt.style.cursor = "default";
+    opt.querySelector("br")?.insertAdjacentHTML(
+      "beforebegin",
+      ' <span class="bf-pct" style="font-size:10px">Black Friday</span>'
+    );
+  }
+
+  selecionarPersonalizacao(true);
+}
+
+
 function selecionarPersonalizacao(valor){
+
+// Na Black Friday não existe a versão sem personalização
+if(!valor && somentePersonalizado(produtoAtual) && produtoAtual.permite_personalizacao)
+  valor = true;
 
 
 estado.personalizado =
@@ -581,6 +626,81 @@ item.classList.add(
 });
 
 
+trocarFotoPorCor(cor);
+
+}
+
+
+// =====================================================
+// FOTO POR COR
+// Cada cor é um produto separado no banco (ex.: "Case Marrom",
+// "Case Preta"). Ao escolher a cor, mostramos a foto do produto
+// do mesmo tipo naquela cor.
+// =====================================================
+
+let fotosPorCor = {};
+
+const NOMES_COR = { preto: "Preto", marrom: "Marrom", quadriculado: "Quadriculado" };
+
+function corDoNome(nome){
+  const n = String(nome || "").toLowerCase();
+  if (n.includes("quadricul")) return "quadriculado";
+  if (n.includes("marrom")) return "marrom";
+  if (n.includes("pret")) return "preto";
+  return null;
+}
+
+async function carregarFotosPorCor(){
+  if (!produtoAtual?.tipo) return;
+  try {
+    const snap = await db.collection("produtos")
+      .where("tipo", "==", produtoAtual.tipo)
+      .get();
+    snap.forEach((doc) => {
+      const d = doc.data();
+      if (d.ativo === false) return;
+      const cor = corDoNome(d.nome);
+      const foto = d.imagem_base64 || d.imagem_url;
+      // a foto do próprio produto tem prioridade
+      if (cor && foto && (!fotosPorCor[cor] || doc.id === produtoAtual.id)) {
+        fotosPorCor[cor] = foto;
+      }
+    });
+    // se o cliente já trocou de cor enquanto carregava, atualiza a foto
+    trocarFotoPorCor(estado.cor);
+  } catch (e) {
+    console.warn("Não foi possível carregar as fotos das outras cores:", e);
+  }
+}
+
+function trocarFotoPorCor(cor){
+  const galeria = document.querySelector(".gallery");
+  const img = galeria?.querySelector("img");
+  if (!galeria || !img) return;
+
+  let nota = galeria.querySelector(".gallery-nota");
+  const foto = fotosPorCor[cor];
+
+  if (!foto) {
+    // Não há foto dessa cor: mantém a atual e avisa
+    if (!nota) {
+      nota = document.createElement("span");
+      nota.className = "gallery-nota";
+      galeria.appendChild(nota);
+    }
+    nota.textContent = `Foto ilustrativa · será feita na cor ${NOMES_COR[cor] || cor}`;
+    return;
+  }
+
+  nota?.remove();
+  if (img.getAttribute("src") === foto) return;
+
+  img.classList.add("trocando");
+  setTimeout(() => {
+    img.onload = () => img.classList.remove("trocando");
+    img.onerror = () => img.classList.remove("trocando");
+    img.src = foto;
+  }, 180);
 }
 
 
@@ -617,15 +737,16 @@ return;
 
 
 
+const promo =
+estado.personalizado ? promoPersonalizado(produtoAtual) : null;
+
 const preco =
 
 estado.personalizado
 
 ?
 
-Number(
-produtoAtual.preco_personalizado || 0
-)
+precoPersonalizadoAtual(produtoAtual)
 
 :
 
@@ -635,10 +756,13 @@ produtoAtual.preco_padrao || 0
 
 
 
-document.getElementById(
-"preco-dinamico"
-).textContent =
-formatarMoeda(preco);
+const precoEl = document.getElementById("preco-dinamico");
+
+if (promo) {
+  precoEl.innerHTML = htmlPrecoPromo(promo, formatarMoeda);
+} else {
+  precoEl.textContent = formatarMoeda(preco);
+}
 
 
 }
@@ -701,9 +825,7 @@ estado.personalizado
 
 ?
 
-Number(
-produtoAtual.preco_personalizado || 0
-)
+precoPersonalizadoAtual(produtoAtual)
 
 :
 
@@ -735,6 +857,13 @@ produtoAtual.tipo,
 
 preco_unitario:
 preco,
+
+// preço normal (sem Black Friday), para o carrinho voltar ao valor
+// certo quando a promoção acabar
+preco_normal:
+estado.personalizado
+  ? Number(produtoAtual.preco_personalizado || 0)
+  : undefined,
 
 
 

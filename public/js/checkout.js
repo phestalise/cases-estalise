@@ -88,6 +88,12 @@ function renderResumoCheckout() {
       <strong>R$ ${subtotal.toFixed(2)}</strong>
     </div>
 
+    ${calcularEconomiaCarrinho() > 0 ? `
+    <div class="bf-economia">
+      <span>Você economizou na Black Friday</span>
+      <strong>R$ ${calcularEconomiaCarrinho().toFixed(2)}</strong>
+    </div>` : ""}
+
     ${desconto > 0 ? `
     <div style="display:flex;justify-content:space-between;margin-top:10px;color:var(--success);">
       <span>Cupom ${escaparTexto(cupomCheckout.codigo)}</span>
@@ -229,17 +235,10 @@ function formatarWhatsapp(numero) {
 window.finalizarPedido = async function (event) {
   event.preventDefault();
 
-  // Alerta: a página da InfinitePay sempre mostra a opção de cartão,
-  // então avisamos antes de redirecionar.
-  const aceitouPix = confirm(
-    "⚠️ ATENÇÃO: aceitamos SOMENTE pagamento via PIX.\n\n" +
-    "Na próxima tela, escolha a opção PIX.\n" +
-    "Caso o pagamento seja feito via cartão de crédito, o pedido será CANCELADO.\n\n" +
-    "Dúvidas? Entre em contato pelo nosso WhatsApp" +
-    (window.APP_CONFIG?.WHATSAPP ? `: ${formatarWhatsapp(window.APP_CONFIG.WHATSAPP)}` : ".") +
-    "\n\nDeseja continuar para o pagamento via Pix?"
-  );
-  if (!aceitouPix) return;
+  if (getCarrinho().some((i) => !i.is_personalizado && somentePersonalizado(i))) {
+    alert("Na Black Friday os produtos são vendidos somente personalizados. Volte ao carrinho, remova os itens sem personalização e adicione a versão personalizada.");
+    return;
+  }
 
   const btn = document.getElementById("btn-finalizar");
   const msgEl = document.getElementById("checkout-msg");
@@ -287,7 +286,7 @@ window.finalizarPedido = async function (event) {
       );
       if (!confirmar) {
         btn.disabled = false;
-        btn.textContent = "Pagar com Pix";
+        btn.textContent = "Ir para o pagamento";
         return;
       }
     }
@@ -348,6 +347,6 @@ window.finalizarPedido = async function (event) {
     msgEl.className = "form-msg error show";
 
     btn.disabled = false;
-    btn.textContent = "Pagar com Pix";
+    btn.textContent = "Ir para o pagamento";
   }
 };

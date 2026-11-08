@@ -11,16 +11,24 @@ function cardProdutoHTML(produto) {
     ? `<img src="${produto.imagem_base64 || produto.imagem_url}" alt="${produto.nome}" />`
     : `<img src="${PLACEHOLDER_CARD}" alt="${tipoLabel}" />`;
 
+  const promo = promoPersonalizado(produto);
+
   return `
-    <a href="produto.html?id=${produto.id}" class="product-card">
-      <div class="thumb">${imagem}<span class="card-cta">Ver detalhes →</span></div>
+    <a href="produto.html?id=${produto.id}" class="product-card${promo ? " tem-promo" : ""}">
+      <div class="thumb">${imagem}${promo ? `<span class="bf-selo">Black Friday<strong>-${promo.pct}%</strong></span>` : ""}<span class="card-cta">Ver detalhes →</span></div>
       <div class="info">
         <span class="tag">${tipoLabel}</span>
         <h3>${produto.nome}</h3>
+        ${promo ? `
+        <div class="price">
+          <span class="bf-rotulo">Personalizada</span>
+          <div class="bf-linha">${htmlPrecoPromo(promo, formatarMoeda)}</div>
+          <small>Oferta de Black Friday</small>
+        </div>` : `
         <div class="price">
           ${formatarMoeda(produto.preco_padrao)}
           <small>a partir de · personalizado ${formatarMoeda(produto.preco_personalizado)}</small>
-        </div>
+        </div>`}
       </div>
     </a>
   `;

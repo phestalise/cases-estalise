@@ -24,6 +24,7 @@ function renderizarCarrinho() {
       <div class="cart-item-info">
         <strong>${item.nome || "Produto"}</strong>
         ${item.is_personalizado ? `<span class="cart-item-meta">Cor: ${item.cor} — "${item.texto_personalizado}"</span>` : ""}
+        ${!item.is_personalizado && somentePersonalizado(item) ? `<span class="cart-item-meta" style="color:var(--danger)">Indisponível na Black Friday: remova e adicione a versão personalizada.</span>` : ""}
         <span class="cart-item-price">R$ ${Number(item.preco_unitario || 0).toFixed(2)}</span>
       </div>
       <div class="cart-item-qtd">
@@ -38,6 +39,7 @@ function renderizarCarrinho() {
   resumoEl.innerHTML = `
     <div class="resumo-box">
       <p class="resumo-subtotal">Subtotal: <strong>R$ ${calcularSubtotal().toFixed(2)}</strong></p>
+      ${calcularEconomiaCarrinho() > 0 ? `<div class="bf-economia"><span>Você economizou na Black Friday</span><strong>R$ ${calcularEconomiaCarrinho().toFixed(2)}</strong></div>` : ""}
 
       <label for="cep-input">CEP de entrega</label>
       <div class="cep-row">
@@ -117,6 +119,10 @@ function selecionarFrete(opcao) {
 }
 
 function irParaCheckout() {
+  if (getCarrinho().some((i) => !i.is_personalizado && somentePersonalizado(i))) {
+    alert("Na Black Friday os produtos são vendidos somente personalizados. Remova os itens sem personalização e adicione a versão personalizada.");
+    return;
+  }
   if (!freteSelecionado) {
     alert("Selecione uma opção de frete antes de continuar.");
     return;

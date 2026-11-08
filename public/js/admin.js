@@ -14,8 +14,8 @@ const STATUS_OPCOES = [
 const STATUS_LABEL_ADMIN = {
   aguardando_pagamento: "Aguardando pagamento",
   pendente_pagamento: "Aguardando pagamento",
-  pago: "Pago (Pix)",
-  pago_cartao: "Pago com cartão — revisar",
+  pago: "Pago",
+  pago_cartao: "Pago com cartão (antigo)",
   pago_divergente: "Valor divergente — revisar",
   em_producao: "Em produção",
   enviado: "Enviado",
@@ -140,7 +140,7 @@ async function carregarDashboard() {
       const p = doc.data();
       if (p.arquivado === true) return; // pedidos zerados não contam
       totalPedidos++;
-      if (["pago", "em_producao", "enviado", "entregue"].includes(p.status)) {
+      if (["pago", "pago_cartao", "em_producao", "enviado", "entregue"].includes(p.status)) {
         pagosCount++;
         soma += Number(p.total || 0);
       }
