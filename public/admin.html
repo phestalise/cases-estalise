@@ -14,7 +14,10 @@
   <!-- Barra superior visível só no mobile -->
   <div class="admin-mobile-bar">
     <span style="font-family:var(--font-display);font-size:16px">Painel do Gestor</span>
-    <button class="menu-btn" onclick="toggleAdminSidebar(true)" aria-label="Abrir menu">☰</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="index.html" class="menu-btn" aria-label="Voltar para a loja" title="Voltar para a loja">⌂</a>
+      <button class="menu-btn" onclick="toggleAdminSidebar(true)" aria-label="Abrir menu">☰</button>
+    </div>
   </div>
 
   <!-- Fundo escurecido ao abrir o menu no mobile -->
@@ -32,14 +35,22 @@
       <a href="#" data-aba="produtos" onclick="trocarAba('produtos')">Produtos</a>
       <a href="#" data-aba="cupons" onclick="trocarAba('cupons')">Cupons de desconto</a>
       <a href="#" data-aba="config" onclick="trocarAba('config')">Identidade visual</a>
-      <a href="#" onclick="handleLogout()" style="margin-top:24px;color:var(--danger)">Sair</a>
+      <a href="index.html" class="admin-voltar-loja" style="margin-top:24px">← Voltar para a loja</a>
+      <a href="#" onclick="handleLogout()" style="color:var(--danger)">Sair</a>
     </nav>
   </aside>
 
   <main class="admin-main">
     <div id="tab-dashboard" class="admin-tab">
-      <h1 style="margin-bottom:24px">Visão geral</h1>
+      <div class="section-head" style="margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <h1>Visão geral</h1>
+        <button class="btn btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="zerarPedidos()">Zerar painel</button>
+      </div>
       <div id="stats" class="stat-cards"></div>
+      <p style="color:var(--gray);font-size:13px;margin-top:-12px">
+        "Zerar painel" baixa um Excel com todos os pedidos e depois os arquiva. Nada é apagado:
+        para ver os antigos, vá em <a href="#" onclick="trocarAba('pedidos')" style="text-decoration:underline">Pedidos</a> e marque "Mostrar arquivados".
+      </p>
     </div>
 
     <div id="tab-pedidos" class="admin-tab hidden">

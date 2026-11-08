@@ -75,9 +75,9 @@ function renderResumoCheckout() {
     <h3>Resumo do Pedido</h3>
 
     ${itens.map(item => `
-      <div style="display:flex;justify-content:space-between;margin:12px 0;">
+      <div style="display:flex;justify-content:space-between;gap:12px;margin:12px 0;">
         <span>${escaparTexto(item.nome || "Produto")} x${Number(item.quantidade || 1)}</span>
-        <strong>R$ ${(Number(item.preco_unitario || 0) * Number(item.quantidade || 1)).toFixed(2)}</strong>
+        <strong style="white-space:nowrap">R$ ${(Number(item.preco_unitario || 0) * Number(item.quantidade || 1)).toFixed(2)}</strong>
       </div>
     `).join("")}
 
@@ -112,7 +112,7 @@ function renderResumoCheckout() {
           <button type="button" class="btn btn-ghost" onclick="removerCupomCheckout()">Remover</button>
         </div>` : `
         <div class="flex gap-8">
-          <input type="text" id="cupom-input" class="field" placeholder="Digite seu cupom" style="text-transform:uppercase" />
+          <input type="text" id="cupom-input" class="field" placeholder="Digite seu cupom" style="text-transform:uppercase;flex:1;min-width:0" />
           <button type="button" class="btn btn-outline" id="btn-aplicar-cupom" onclick="aplicarCupomCheckout()">Aplicar</button>
         </div>`}
       <p id="cupom-checkout-msg" class="form-msg"></p>

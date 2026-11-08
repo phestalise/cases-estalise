@@ -7,30 +7,54 @@ async function renderLayout(paginaAtiva) {
   let nomeMarca = "Cases Estalise";
   let logado = false;
 
-  // 1) Desenha header/rodapé imediatamente com os valores padrão,
-  //    para a página nunca ficar sem menu enquanto o Firebase responde.
-  pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado);
-
-  // 2) Busca configurações da loja e login em paralelo e redesenha.
-  const [config, user] = await Promise.all([
+  // Busca configurações da loja e login em paralelo.
+  const dados = Promise.all([
     db.collection("configuracoes_loja").doc("global").get()
       .then(doc => (doc.exists ? doc.data() : null))
       .catch(e => { console.warn("Não foi possível carregar configurações da loja:", e); return null; }),
     getCurrentUser().catch(() => null)
   ]);
 
-  if (config) {
-    logoUrl = config.logo_url || logoUrl;
-    nomeMarca = config.nome_marca || nomeMarca;
-  }
-  logado = !!user;
+  // Na intro a cortina cobre a tela: espera os dados (até 900 ms) para
+  // desenhar o header uma vez só e a animação não reiniciar no meio.
+  // Fora da intro, desenha na hora com os valores padrão.
+  let resultado = null;
+  dados.then(r => { resultado = r; });
 
+  if (document.documentElement.classList.contains("intro")) {
+    await Promise.race([dados, new Promise(r => setTimeout(r, 900))]);
+  }
+
+  const aplicarDados = ([config, user]) => {
+    if (config) {
+      logoUrl = config.logo_url || logoUrl;
+      nomeMarca = config.nome_marca || nomeMarca;
+    }
+    logado = !!user;
+  };
+
+  // Desenha agora (com os dados, se já chegaram) e de novo quando chegarem.
+  if (resultado) aplicarDados(resultado);
+  pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado);
+
+  aplicarDados(await dados);
   pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado);
 }
+
+let assinaturaLayout = null;
 
 function pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado) {
   const headerEl = document.getElementById("site-header");
   const footerEl = document.getElementById("site-footer");
+
+  // Não redesenha se nada mudou; se for uma repintura, não reanima.
+  const assinatura = [paginaAtiva, logoUrl, nomeMarca, logado].join("|");
+  if (assinatura === assinaturaLayout) return;
+  if (assinaturaLayout !== null) {
+    headerEl?.classList.add("sem-intro");
+    footerEl?.classList.add("sem-intro");
+  }
+  assinaturaLayout = assinatura;
 
   if (headerEl) {
     headerEl.classList.add("site-header");
@@ -156,6 +180,13 @@ function iniciarEfeitos() {
   }, { passive: true });
   aoRolar();
 
+  if (document.documentElement.classList.contains("intro")) {
+    dividirTituloHero();
+    // A contagem começa quando a página está pronta (e não no carregamento),
+    // para a intro não ser cortada em conexões lentas.
+    setTimeout(() => window.finalizarIntro?.(), 3600);
+  }
+
   // Revelar ao rolar
   const reduzMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduzMovimento || !("IntersectionObserver" in window)) return;
@@ -202,4 +233,31 @@ function observarBadgeCarrinho() {
     void badge.offsetWidth; // reinicia a animação
     badge.classList.add("bump");
   }).observe(badge, { childList: true, characterData: true, subtree: true });
+}
+
+// Quebra o título do hero em palavras para entrarem uma a uma na intro.
+function dividirTituloHero() {
+  const h1 = document.querySelector(".hero h1");
+  if (!h1 || h1.classList.contains("intro-split")) return;
+  let i = 0;
+  const embrulhar = (conteudo) => {
+    const span = document.createElement("span");
+    span.className = "intro-palavra";
+    span.style.setProperty("--i", i++);
+    span.append(conteudo);
+    return span;
+  };
+  Array.from(h1.childNodes).forEach((no) => {
+    if (no.nodeType === Node.TEXT_NODE) {
+      const frag = document.createDocumentFragment();
+      no.textContent.split(/(\s+)/).forEach((parte) => {
+        if (!parte) return;
+        frag.append(/^\s+$/.test(parte) ? document.createTextNode(parte) : embrulhar(parte));
+      });
+      no.replaceWith(frag);
+    } else if (no.nodeType === Node.ELEMENT_NODE && no.tagName !== "BR") {
+      no.replaceWith(embrulhar(no.cloneNode(true)));
+    }
+  });
+  h1.classList.add("intro-split");
 }

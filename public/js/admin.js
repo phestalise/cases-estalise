@@ -194,7 +194,7 @@ async function carregarPedidosAdmin() {
               ${STATUS_OPCOES.map(status => `<option value="${status}" ${status === (p.status === "pendente_pagamento" ? "aguardando_pagamento" : p.status) ? "selected" : ""}>${STATUS_LABEL_ADMIN[status]}</option>`).join("")}
             </select>
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; font-size:14px">
+          <div class="pedido-detalhes">
             <div>
               <strong>Cliente</strong>
               <p>${escapeHtml(cliente.nome_completo || "-")}<br>CPF: ${escapeHtml(cliente.cpf || "-")}<br>Tel: ${escapeHtml(cliente.telefone || "-")}</p>

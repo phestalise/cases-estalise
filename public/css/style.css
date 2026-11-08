@@ -1362,3 +1362,155 @@ hr.stitch.container { margin: 48px auto; max-width: calc(var(--container) - 48px
   .section.container, .container { padding-left: 16px; padding-right: 16px; }
   .section { padding-top: 56px; padding-bottom: 56px; }
 }
+
+/* Topo do menu do painel: título e nome do gestor empilhados */
+.admin-sidebar .brand { flex-direction: column; align-items: flex-start; gap: 4px; }
+.admin-sidebar .brand #admin-nome { margin-top: 0 !important; }
+
+/* Link "Voltar para a loja" no painel */
+.admin-nav a.admin-voltar-loja { border-top: 1px solid var(--line); padding-top: 18px; color: var(--accent-warm); }
+.admin-nav a.admin-voltar-loja:hover { color: var(--white); }
+
+/* =====================================================================
+   ANIMAÇÃO DE ENTRADA (intro)
+   Roda na primeira visita da sessão e ao atualizar a página (F5).
+   A classe "intro" é colocada no <html> por um script no <head>.
+   Todas usam fill-mode "backwards": ao terminar, os elementos voltam
+   ao estilo normal (hover etc. continuam funcionando).
+===================================================================== */
+
+/* Cortina com o logo */
+html.intro body { animation: none; }
+html.intro body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  background: var(--black) url("../assets/ESTALISE.png") center / 70px auto no-repeat;
+  animation: introCortina 1.1s var(--ease-out) forwards;
+}
+@keyframes introCortina {
+  0%   { clip-path: inset(0 0 0 0); background-size: 60px auto; }
+  45%  { clip-path: inset(0 0 0 0); background-size: 120px auto; }
+  100% { clip-path: inset(0 0 100% 0); background-size: 130px auto; }
+}
+
+/* Header */
+html.intro .site-header { animation: introHeader 0.8s var(--ease-out) 0.55s backwards; }
+html.intro .site-header .brand img { animation: introLogo 1s var(--ease-out) 0.8s backwards; }
+html.intro .site-header .brand span { animation: introDeslizaEsq 0.8s var(--ease-out) 0.95s backwards; }
+html.intro .nav-links a { animation: introCai 0.7s var(--ease-out) backwards; }
+html.intro .nav-links a:nth-child(1) { animation-delay: 1s; }
+html.intro .nav-links a:nth-child(2) { animation-delay: 1.1s; }
+html.intro .nav-links a:nth-child(3) { animation-delay: 1.2s; }
+html.intro .header-actions .icon-btn { animation: introPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+html.intro .header-actions .icon-btn:nth-child(1) { animation-delay: 1.25s; }
+html.intro .header-actions .icon-btn:nth-child(2) { animation-delay: 1.38s; }
+
+/* Hero: atrasa a sequência para depois da cortina e título palavra por palavra */
+html.intro .hero > *:nth-child(2) { animation-delay: 1.75s; }
+html.intro .hero > *:nth-child(3) { animation-delay: 1.9s; }
+html.intro .hero > *:nth-child(4) { animation-delay: 2.1s; }
+html.intro .hero h1 { animation: none; opacity: 0; }
+html.intro .hero h1.intro-split { opacity: 1; }
+.intro-palavra { display: inline-block; }
+html.intro .intro-palavra {
+  animation: introPalavra 0.9s var(--ease-out) backwards;
+  animation-delay: calc(1s + var(--i) * 0.09s);
+}
+
+/* Ícones de benefícios voando para o lugar */
+html.intro .trust-item .ico { animation: introIcone 1s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+html.intro .trust-item:nth-child(1) .ico { animation-delay: 1.5s; }
+html.intro .trust-item:nth-child(2) .ico { animation-delay: 1.62s; }
+html.intro .trust-item:nth-child(3) .ico { animation-delay: 1.74s; }
+html.intro .trust-item:nth-child(4) .ico { animation-delay: 1.86s; }
+
+/* Cards / passos chegam de mais longe durante a intro */
+html.intro .reveal:not(.in) { transform: translateY(80px) scale(0.92) rotate(-2deg); }
+html.intro .reveal { transition-duration: 1.1s; }
+
+/* WhatsApp entra rolando pela direita */
+html.intro .whatsapp-float { animation: introWhats 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) 1.9s backwards; }
+
+/* Repintura do header durante a intro não reinicia as animações */
+html.intro .sem-intro, html.intro .sem-intro * { animation: none !important; }
+
+@keyframes introHeader { from { transform: translateY(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes introLogo {
+  from { transform: translateX(-80px) rotate(-200deg) scale(0.4); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes introDeslizaEsq { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes introCai { from { transform: translateY(-28px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes introPop {
+  from { transform: scale(0) rotate(-45deg); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes introPalavra {
+  from { transform: translateY(60%) rotate(4deg); opacity: 0; filter: blur(8px); }
+  to   { transform: none; opacity: 1; filter: none; }
+}
+@keyframes introIcone {
+  from { transform: translate(-60px, 40px) rotate(-180deg) scale(0); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes introWhats {
+  from { transform: translateX(160px) rotate(360deg) scale(0.4); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* Ao terminar a intro, as animações normais não podem recomeçar (evita "piscar") */
+html.intro-feita body,
+html.intro-feita .hero > * { animation: none; }
+
+
+/* =====================================================================
+   RESPONSIVIDADE — ajustes encontrados testando em 360/390/768px
+===================================================================== */
+
+/* Painel: a área principal não pode ser esticada por tabelas largas */
+.admin-main { min-width: 0; }
+
+/* Painel: detalhes do pedido em 2 colunas; 1 coluna no celular */
+.pedido-detalhes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 14px; }
+.pedido-detalhes p { overflow-wrap: anywhere; }
+
+@media (max-width: 720px) {
+  /* Barra do topo do painel com altura natural (o grid esticava as linhas) */
+  .admin-shell { grid-template-rows: auto 1fr; align-content: start; }
+  .admin-main { padding: 20px 16px; }
+  .admin-main h1 { font-size: 28px; }
+  .pedido-detalhes { grid-template-columns: 1fr; gap: 4px; }
+  .admin-main .summary-box { padding: 20px; }
+  .admin-main .section-head > .flex { width: 100%; }
+  .admin-main .section-head > .flex .btn,
+  .admin-main .section-head > .flex .select { flex: 1 1 auto; }
+}
+
+/* Header da loja: marca + ícones cabem na mesma linha no celular */
+@media (max-width: 480px) {
+  .header-inner { padding: 12px 16px; gap: 8px; }
+  .brand { gap: 8px; min-width: 0; }
+  .brand img { height: 36px; }
+  .brand span { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-actions { gap: 4px; }
+  .icon-btn { width: 38px; height: 38px; }
+  .nav-links { gap: 20px; font-size: 12px; margin-top: 4px; padding-top: 10px; }
+  .site-header.scrolled .brand img { height: 32px; }
+
+  .cart-card, .summary-box, .resumo-box { padding: 20px; }
+  .page-title { padding-top: 32px; }
+  .form-card { margin: 32px 16px; width: auto; }
+  .auth-gate { margin: 32px 0; padding: 48px 20px; }
+  .hero h1 { font-size: clamp(34px, 10vw, 44px); }
+  .hero::after { inset: 10px; }
+  .section-head h2 { font-size: 28px; }
+}
+
+/* Campos lado a lado (Número/Complemento, Cidade/UF) não espremem demais */
+@media (max-width: 380px) {
+  #form-checkout .flex.gap-8 { flex-wrap: wrap; }
+  #form-checkout .flex.gap-8 > .form-group { flex: 1 1 120px !important; }
+}

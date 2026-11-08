@@ -6,6 +6,27 @@
 <title>Produto — Estalise</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
+<script>
+/* Animação de entrada: só na 1ª visita da sessão ou ao atualizar (F5) */
+(function () {
+  try {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+    var recarregou = nav && nav.type === "reload";
+    var primeiraVisita = !sessionStorage.getItem("estalise_intro");
+    if (!recarregou && !primeiraVisita) return;
+    sessionStorage.setItem("estalise_intro", "1");
+    var html = document.documentElement;
+    html.classList.add("intro");
+    window.finalizarIntro = function () {
+      html.classList.add("intro-feita");
+      html.classList.remove("intro");
+    };
+    // Segurança: se os scripts demorarem muito, encerra a intro mesmo assim.
+    setTimeout(window.finalizarIntro, 8000);
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
