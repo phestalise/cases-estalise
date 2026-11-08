@@ -12,7 +12,7 @@
 <div id="site-header"></div>
 
 <div class="container">
-  <h1 style="padding-top:40px">Checkout</h1>
+  <h1 class="page-title">Checkout</h1>
 
   <div class="cart-layout">
     <form id="form-checkout" onsubmit="finalizarPedido(event)">
@@ -51,9 +51,37 @@
         </div>
       </div>
 
-      <button id="btn-finalizar" type="submit" class="btn btn-primary btn-block">Ir para pagamento</button>
+      <h3 style="margin:28px 0 12px">Forma de pagamento</h3>
+      <div class="form-msg error show" style="margin:0 0 12px;line-height:1.5">
+        ⚠️ <strong>Aceitamos somente pagamento via Pix.</strong><br>
+        Caso o pagamento seja feito via cartão de crédito, <strong>o pedido será cancelado</strong>.<br>
+        Dúvidas? Entre em contato pelo <a id="link-whatsapp-alerta" href="#" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline">WhatsApp</a>.
+      </div>
+      <div class="summary-box" style="display:flex;align-items:center;gap:12px;margin-bottom:20px;border:1px solid var(--success)">
+        <span style="font-size:22px">⚡</span>
+        <div>
+          <strong>Pix</strong>
+          <div style="color:var(--gray);font-size:12px">Aprovação na hora. Pedido confirmado automaticamente.</div>
+        </div>
+      </div>
+
+      <button id="btn-finalizar" type="submit" class="btn btn-primary btn-block">Pagar com Pix</button>
       <p id="checkout-msg" class="form-msg"></p>
-      <p style="color:var(--gray);font-size:12px;margin-top:12px">Você será redirecionado ao checkout seguro da InfinityPay para concluir o pagamento via Pix ou cartão.</p>
+      <p style="color:var(--gray);font-size:12px;margin-top:12px">Você será levado à página segura da InfinitePay. Na tela de pagamento, escolha <strong>Pix</strong>: é a única forma de pagamento aceita pela loja.</p>
+      <script>
+        (function () {
+          var numero = String((window.APP_CONFIG || {}).WHATSAPP || "").replace(/\D/g, "");
+          var link = document.getElementById("link-whatsapp-alerta");
+          if (!link) return;
+          if (numero) {
+            link.href = "https://wa.me/" + numero + "?text=" +
+              encodeURIComponent("Olá! Tenho uma dúvida sobre o pagamento do meu pedido na Estalise.");
+          } else {
+            link.removeAttribute("href");
+            link.style.textDecoration = "none";
+          }
+        })();
+      </script>
     </form>
 
     <div id="resumo-checkout"></div>

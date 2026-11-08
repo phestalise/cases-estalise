@@ -3,6 +3,8 @@
 const STATUS_OPCOES = [
   "aguardando_pagamento",
   "pago",
+  "pago_cartao",
+  "pago_divergente",
   "em_producao",
   "enviado",
   "entregue",
@@ -11,7 +13,10 @@ const STATUS_OPCOES = [
 
 const STATUS_LABEL_ADMIN = {
   aguardando_pagamento: "Aguardando pagamento",
-  pago: "Pago",
+  pendente_pagamento: "Aguardando pagamento",
+  pago: "Pago (Pix)",
+  pago_cartao: "Pago com cartão — revisar",
+  pago_divergente: "Valor divergente — revisar",
   em_producao: "Em produção",
   enviado: "Enviado",
   entregue: "Entregue",
@@ -19,6 +24,16 @@ const STATUS_LABEL_ADMIN = {
 };
 
 let adminUserId = null;
+const cacheClientes = {};
+
+async function buscarCliente(userId) {
+  if (!userId) return {};
+  if (!cacheClientes[userId]) {
+    const userDoc = await db.collection("usuarios").doc(userId).get();
+    cacheClientes[userId] = userDoc.exists ? userDoc.data() : {};
+  }
+  return cacheClientes[userId];
+}
 
 // Placeholder inline (evita 404)
 const PLACEHOLDER_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" fill="%23ccc"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="20">📷</text></svg>';
@@ -103,7 +118,8 @@ function trocarAba(aba) {
 
   if (aba === "pedidos") carregarPedidosAdmin();
   if (aba === "produtos") carregarProdutosAdmin();
-  if (aba === "config") carregarConfiguracoes();
+  if (aba === "cupons") carregarCuponsAdmin();
+  if (aba === "config" && typeof carregarConfiguracoes === "function") carregarConfiguracoes();
   if (aba === "dashboard") carregarDashboard();
 
   // Fecha o menu lateral automaticamente no mobile após escolher a aba
@@ -116,12 +132,14 @@ function trocarAba(aba) {
 async function carregarDashboard() {
   try {
     const todos = await db.collection("pedidos").get();
-    const totalPedidos = todos.size;
+    let totalPedidos = 0;
     let pagosCount = 0;
     let soma = 0;
 
     todos.forEach(doc => {
       const p = doc.data();
+      if (p.arquivado === true) return; // pedidos zerados não contam
+      totalPedidos++;
       if (["pago", "em_producao", "enviado", "entregue"].includes(p.status)) {
         pagosCount++;
         soma += Number(p.total || 0);
@@ -147,19 +165,18 @@ async function carregarPedidosAdmin() {
 
   try {
     const snapshot = await db.collection("pedidos").orderBy("created_at", "desc").get();
-    if (snapshot.empty) {
+    const mostrarArquivados = document.getElementById("mostrar-arquivados")?.checked;
+    const docs = snapshot.docs.filter(doc => mostrarArquivados || doc.data().arquivado !== true);
+
+    if (!docs.length) {
       container.innerHTML = `<p class="empty-state">Nenhum pedido ainda.</p>`;
       return;
     }
 
     const pedidosHtml = [];
-    for (const doc of snapshot.docs) {
+    for (const doc of docs) {
       const p = doc.data();
-      let cliente = { nome_completo: "-", cpf: "-", telefone: "-" };
-      if (p.user_id) {
-        const userDoc = await db.collection("usuarios").doc(p.user_id).get();
-        if (userDoc.exists) cliente = userDoc.data();
-      }
+      const cliente = await buscarCliente(p.user_id);
 
       const itensHtml = (p.itens || []).map(item => `
         <li>${escapeHtml(item.quantidade || 1)}x ${escapeHtml(item.nome || "Produto")} ${item.tipo ? `(${escapeHtml(item.tipo)})` : ""}
@@ -172,9 +189,9 @@ async function carregarPedidosAdmin() {
       pedidosHtml.push(`
         <div class="summary-box" style="margin-bottom:20px">
           <div class="section-head" style="margin-bottom:12px">
-            <div><strong>Pedido #${escapeHtml(doc.id.slice(0,8))}</strong><div style="color:var(--gray);font-size:12px">${escapeHtml(data)}</div></div>
+            <div><strong>Pedido #${escapeHtml(doc.id.slice(0,8))}</strong>${p.arquivado === true ? ` <span style="color:var(--gray);font-size:12px">(arquivado)</span>` : ""}<div style="color:var(--gray);font-size:12px">${escapeHtml(data)}</div></div>
             <select class="select" onchange="atualizarStatusPedido('${doc.id}', this.value)">
-              ${STATUS_OPCOES.map(status => `<option value="${status}" ${status === p.status ? "selected" : ""}>${STATUS_LABEL_ADMIN[status]}</option>`).join("")}
+              ${STATUS_OPCOES.map(status => `<option value="${status}" ${status === (p.status === "pendente_pagamento" ? "aguardando_pagamento" : p.status) ? "selected" : ""}>${STATUS_LABEL_ADMIN[status]}</option>`).join("")}
             </select>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; font-size:14px">
@@ -187,7 +204,8 @@ async function carregarPedidosAdmin() {
             <div>
               <strong>Itens</strong><ul style="margin:6px 0 12px 18px">${itensHtml}</ul>
               <strong>Pagamento</strong>
-              <p>${p.pagamento ? `${escapeHtml(p.pagamento.status || "-")} · ${escapeHtml(p.pagamento.metodo || "-")} · ${formatarMoeda(p.pagamento.valor || 0)}` : "Não registrado"}</p>
+              <p>${p.pagamento ? `${escapeHtml(p.pagamento.status || "-")} · ${escapeHtml(p.pagamento.metodo || "-")} · ${formatarMoeda(p.pagamento.valor_pago ?? p.pagamento.valor ?? 0)}` : "Não registrado"}</p>
+              ${p.cupom?.codigo ? `<strong>Cupom</strong><p>${escapeHtml(p.cupom.codigo)} · −${formatarMoeda(p.desconto || 0)}</p>` : ""}
               <strong>Frete</strong>
               <p>${escapeHtml(p.metodo_envio || "-")} · ${formatarMoeda(p.valor_frete || 0)}</p>
             </div>
@@ -389,5 +407,277 @@ async function salvarProduto(produtoId) {
   } catch (erro) {
     console.error("Erro salvar produto:", erro);
     alert(erro.message);
+  }
+}
+
+// =========================================================
+// EXPORTAR PEDIDOS EM EXCEL (SheetJS)
+// =========================================================
+function preencherFiltroStatusExport() {
+  const select = document.getElementById("filtro-status-export");
+  if (!select || select.options.length > 1) return;
+  STATUS_OPCOES.forEach(status => {
+    const opt = document.createElement("option");
+    opt.value = status;
+    opt.textContent = STATUS_LABEL_ADMIN[status];
+    select.appendChild(opt);
+  });
+}
+document.addEventListener("DOMContentLoaded", preencherFiltroStatusExport);
+
+// Retorna a lista de IDs exportados (array vazio se não havia pedidos),
+// ou null em caso de erro. Pedidos arquivados (zerados) não entram.
+// Com { todos: true } ignora o filtro de status (usado ao zerar).
+async function exportarPedidosExcel(opcoes = {}) {
+  if (typeof XLSX === "undefined") {
+    alert("Biblioteca de Excel não carregou. Verifique sua conexão e recarregue a página.");
+    return null;
+  }
+
+  const btn = document.getElementById("btn-exportar-excel");
+  const filtro = opcoes.todos ? "" : (document.getElementById("filtro-status-export")?.value || "");
+  const textoOriginal = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Gerando..."; }
+
+  try {
+    const snapshot = await db.collection("pedidos").orderBy("created_at", "desc").get();
+    const linhas = [];
+    const idsExportados = [];
+
+    for (const doc of snapshot.docs) {
+      const p = doc.data();
+      if (p.arquivado === true) continue;
+      const statusNormalizado = p.status === "pendente_pagamento" ? "aguardando_pagamento" : p.status;
+      if (filtro && statusNormalizado !== filtro) continue;
+      idsExportados.push(doc.id);
+
+      const c = await buscarCliente(p.user_id);
+      const e = p.endereco || {};
+      const itens = (p.itens || []).map(item => {
+        let txt = `${item.quantidade || 1}x ${item.nome || "Produto"}`;
+        if (item.tipo) txt += ` (${item.tipo})`;
+        if (item.is_personalizado && item.personalizacao) {
+          txt += ` — Personalizado: "${item.personalizacao.texto_personalizado || ""}" Cor: ${item.personalizacao.cor || "-"}`;
+        }
+        return txt;
+      }).join(" | ");
+
+      linhas.push({
+        "Pedido": doc.id,
+        "Data": p.created_at?.toDate ? p.created_at.toDate().toLocaleString("pt-BR") : "",
+        "Status": STATUS_LABEL_ADMIN[p.status] || p.status || "",
+        "Cliente": c.nome_completo || "",
+        "CPF": c.cpf || "",
+        "Telefone": c.telefone || "",
+        "CEP": e.cep || "",
+        "Endereço": [e.logradouro, e.numero, e.complemento].filter(Boolean).join(", "),
+        "Bairro": e.bairro || "",
+        "Cidade": e.cidade || "",
+        "UF": e.uf || "",
+        "Itens": itens,
+        "Subtotal (R$)": Number(p.subtotal || 0),
+        "Cupom": p.cupom?.codigo || "",
+        "Desconto (R$)": Number(p.desconto || 0),
+        "Frete (R$)": Number(p.valor_frete || 0),
+        "Envio": p.metodo_envio || "",
+        "Total (R$)": Number(p.total || 0),
+        "Forma de pagamento": p.pagamento?.metodo || "",
+        "Valor pago (R$)": Number(p.pagamento?.valor_pago || 0),
+        "Comprovante": p.pagamento?.receipt_url || "",
+        "Rastreio": p.codigo_rastreio || ""
+      });
+    }
+
+    if (!linhas.length) {
+      alert("Nenhum pedido encontrado para exportar.");
+      return [];
+    }
+
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    planilha["!cols"] = Object.keys(linhas[0]).map(chave => ({
+      wch: Math.min(60, Math.max(chave.length, ...linhas.map(l => String(l[chave] ?? "").length)) + 2)
+    }));
+
+    const livro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro, planilha, "Pedidos");
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(livro, `pedidos-estalise-${filtro || "todos"}-${hoje}.xlsx`);
+    return idsExportados;
+  } catch (erro) {
+    console.error("Erro ao exportar pedidos:", erro);
+    alert("Erro ao exportar pedidos.");
+    return null;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = textoOriginal; }
+  }
+}
+
+// =========================================================
+// ZERAR PEDIDOS
+// 1) Baixa o Excel com todos os pedidos atuais;
+// 2) Marca exatamente esses pedidos como arquivados.
+// Nada é apagado: o pedido some do painel e do dashboard, mas o
+// cliente continua vendo o histórico em "Minha conta" e dá para
+// consultar marcando "Mostrar arquivados".
+// =========================================================
+async function zerarPedidos() {
+  if (!confirm(
+    "Isso vai baixar o Excel com TODOS os pedidos atuais e depois zerar a lista do painel.\n\n" +
+    "Os pedidos não são apagados: ficam arquivados (marque \"Mostrar arquivados\" para vê-los).\n\nContinuar?"
+  )) return;
+
+  const btn = document.getElementById("btn-zerar-pedidos");
+  const textoOriginal = btn ? btn.textContent : "";
+
+  const ids = await exportarPedidosExcel({ todos: true });
+  if (ids === null) return alert("O Excel não foi gerado, então nenhum pedido foi zerado.");
+  if (!ids.length) return;
+
+  if (!confirm(`Excel baixado com ${ids.length} pedido(s).\n\nConfira se o arquivo foi salvo e clique OK para zerar.`)) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = "Zerando..."; }
+  try {
+    // Firestore aceita no máximo 500 operações por batch
+    for (let i = 0; i < ids.length; i += 450) {
+      const batch = db.batch();
+      ids.slice(i, i + 450).forEach(id => {
+        batch.update(db.collection("pedidos").doc(id), {
+          arquivado: true,
+          arquivado_em: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      await batch.commit();
+    }
+    alert(`${ids.length} pedido(s) zerado(s) com sucesso.`);
+    carregarPedidosAdmin();
+    carregarDashboard();
+  } catch (erro) {
+    console.error("Erro ao zerar pedidos:", erro);
+    alert("Erro ao zerar pedidos. Parte deles pode já ter sido arquivada; recarregue a página e tente de novo.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = textoOriginal; }
+  }
+}
+
+// =========================================================
+// CUPONS DE DESCONTO
+// Documento: cupons/{CODIGO}
+// { tipo: "percentual"|"fixo", valor, ativo, usos, usos_max, valor_minimo, validade }
+// =========================================================
+async function carregarCuponsAdmin() {
+  const container = document.getElementById("lista-cupons-admin");
+  if (!container) return;
+  container.innerHTML = `<p class="empty-state">Carregando cupons...</p>`;
+
+  try {
+    const snapshot = await db.collection("cupons").get();
+    if (snapshot.empty) {
+      container.innerHTML = `<p class="empty-state">Nenhum cupom criado ainda.</p>`;
+      return;
+    }
+
+    const rows = snapshot.docs.map(doc => {
+      const c = doc.data();
+      const desconto = c.tipo === "fixo" ? formatarMoeda(c.valor) : `${Number(c.valor)}%`;
+      const validade = c.validade?.toDate ? c.validade.toDate().toLocaleDateString("pt-BR") : "Sem validade";
+      const expirado = c.validade?.toDate && c.validade.toDate() < new Date();
+      const usos = `${Number(c.usos || 0)}${Number(c.usos_max) > 0 ? ` / ${Number(c.usos_max)}` : ""}`;
+      const id = escapeHtml(doc.id);
+      return `
+        <tr>
+          <td><strong>${id}</strong></td>
+          <td>${desconto}</td>
+          <td>${Number(c.valor_minimo) > 0 ? formatarMoeda(c.valor_minimo) : "-"}</td>
+          <td>${usos}</td>
+          <td>${escapeHtml(validade)}${expirado ? " (expirado)" : ""}</td>
+          <td>${c.ativo !== false ? "Sim" : "Não"}</td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-ghost" onclick="alternarCupom('${id}', ${c.ativo === false})">${c.ativo !== false ? "Desativar" : "Ativar"}</button>
+            <button class="btn btn-ghost" style="color:var(--danger)" onclick="excluirCupom('${id}')">Excluir</button>
+          </td>
+        </tr>`;
+    }).join("");
+
+    container.innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Código</th><th>Desconto</th><th>Mínimo</th><th>Usos</th><th>Validade</th><th>Ativo</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } catch (erro) {
+    console.error("Erro cupons:", erro);
+    container.innerHTML = `<p class="empty-state">Erro ao carregar cupons. Confira se as regras do Firestore foram publicadas.</p>`;
+  }
+}
+
+function mostrarMsgCupom(texto, tipo) {
+  const el = document.getElementById("cupom-msg");
+  if (!el) return alert(texto);
+  el.textContent = texto;
+  el.className = `form-msg ${tipo} show`;
+}
+
+async function salvarCupom() {
+  const codigo = document.getElementById("c-codigo").value.trim().toUpperCase().replace(/\s+/g, "");
+  const tipo = document.getElementById("c-tipo").value;
+  const valor = Number(document.getElementById("c-valor").value);
+  const minimo = Number(document.getElementById("c-minimo").value || 0);
+  const usosMax = parseInt(document.getElementById("c-usos-max").value || "0", 10);
+  const validadeStr = document.getElementById("c-validade").value;
+
+  if (!/^[A-Z0-9_-]{3,30}$/.test(codigo)) {
+    return mostrarMsgCupom("Código inválido: use de 3 a 30 letras, números, - ou _.", "error");
+  }
+  if (!(valor > 0)) return mostrarMsgCupom("Informe o valor do desconto.", "error");
+  if (tipo === "percentual" && valor >= 100) return mostrarMsgCupom("Porcentagem deve ser menor que 100.", "error");
+
+  try {
+    const ref = db.collection("cupons").doc(codigo);
+    const existente = await ref.get();
+    if (existente.exists && !confirm(`O cupom ${codigo} já existe. Deseja substituir?`)) return;
+
+    await ref.set({
+      tipo,
+      valor,
+      valor_minimo: minimo > 0 ? minimo : 0,
+      usos_max: usosMax > 0 ? usosMax : 0,
+      usos: existente.exists ? Number(existente.data().usos || 0) : 0,
+      // Válido até o fim do dia escolhido (horário local)
+      validade: validadeStr ? firebase.firestore.Timestamp.fromDate(new Date(`${validadeStr}T23:59:59`)) : null,
+      ativo: true,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    ["c-codigo", "c-valor", "c-minimo", "c-usos-max", "c-validade"].forEach(id => {
+      document.getElementById(id).value = "";
+    });
+    mostrarMsgCupom(`Cupom ${codigo} criado!`, "success");
+    carregarCuponsAdmin();
+  } catch (erro) {
+    console.error("Erro salvar cupom:", erro);
+    mostrarMsgCupom("Erro ao salvar cupom. Confira se as regras do Firestore foram publicadas.", "error");
+  }
+}
+
+async function alternarCupom(codigo, ativar) {
+  try {
+    await db.collection("cupons").doc(codigo).update({ ativo: ativar });
+    carregarCuponsAdmin();
+  } catch (erro) {
+    console.error(erro);
+    alert("Erro ao atualizar cupom.");
+  }
+}
+
+async function excluirCupom(codigo) {
+  if (!confirm(`Excluir o cupom ${codigo}?`)) return;
+  try {
+    await db.collection("cupons").doc(codigo).delete();
+    carregarCuponsAdmin();
+  } catch (erro) {
+    console.error(erro);
+    alert("Erro ao excluir cupom.");
   }
 }

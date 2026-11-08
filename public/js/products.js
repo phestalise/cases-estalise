@@ -13,7 +13,7 @@ function cardProdutoHTML(produto) {
 
   return `
     <a href="produto.html?id=${produto.id}" class="product-card">
-      <div class="thumb">${imagem}</div>
+      <div class="thumb">${imagem}<span class="card-cta">Ver detalhes →</span></div>
       <div class="info">
         <span class="tag">${tipoLabel}</span>
         <h3>${produto.nome}</h3>

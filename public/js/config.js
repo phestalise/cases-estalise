@@ -24,6 +24,10 @@ window.APP_CONFIG = {
   },
 
   FUNCTIONS_URL:
-  "https://api-case.vercel.app/api"
+  "https://api-case.vercel.app/api",
+
+  // WhatsApp da loja: só números, com DDI 55 + DDD (ex.: "5511999998888")
+  WHATSAPP:
+  "5511995778390"
 
 };

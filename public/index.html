@@ -14,21 +14,46 @@
 
 <section class="hero">
   <span class="eyebrow">Feito à mão · Couro sintético premium</span>
-  <h1>Estalise,<br>gravada no seu dia a dia.</h1>
+  <h1>Estalise,<br><em>gravada</em> no seu dia a dia.</h1>
   <p>Cases e pastas personalizadas com nome, cor e acabamento à sua escolha. Peças pensadas para acompanhar seus documentos e dispositivos com estilo discreto e resistente.</p>
   <div class="hero-actions">
     <a href="cases.html" class="btn btn-primary">Ver Cases</a>
     <a href="cases.html?tipo=pasta" class="btn btn-outline">Ver Pastas</a>
   </div>
+  <div><a href="#destaques-secao" class="scroll-hint" aria-label="Rolar para os destaques"><span></span>Role</a></div>
 </section>
 
-<section class="section container">
+<section class="trust-strip">
+  <div class="container">
+    <div class="trust-item">
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 4.4 3.4 7.6 8 8 4.6-.4 8-3.6 8-8V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+      <div><strong>Feito à mão</strong><small>Acabamento artesanal</small></div>
+    </div>
+    <div class="trust-item">
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg></div>
+      <div><strong>Personalizado</strong><small>Seu nome, sua cor</small></div>
+    </div>
+    <div class="trust-item">
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg></div>
+      <div><strong>Envio Brasil</strong><small>PAC e SEDEX com rastreio</small></div>
+    </div>
+    <div class="trust-item">
+      <div class="ico"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></div>
+      <div><strong>Pix</strong><small>Aprovação na hora</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="section container" id="destaques-secao">
   <div class="section-head">
     <h2>Destaques</h2>
     <a href="cases.html" class="btn-ghost">Ver catálogo completo →</a>
   </div>
   <div id="destaques" class="grid">
-    <!-- produtos carregados via JS -->
+    <div class="skeleton-card"><div class="sk-thumb"></div><div class="sk-line short"></div><div class="sk-line mid"></div></div>
+    <div class="skeleton-card"><div class="sk-thumb"></div><div class="sk-line short"></div><div class="sk-line mid"></div></div>
+    <div class="skeleton-card"><div class="sk-thumb"></div><div class="sk-line short"></div><div class="sk-line mid"></div></div>
+    <div class="skeleton-card"><div class="sk-thumb"></div><div class="sk-line short"></div><div class="sk-line mid"></div></div>
   </div>
 </section>
 
@@ -38,27 +63,21 @@
   <div class="section-head">
     <h2>Como funciona a personalização</h2>
   </div>
-  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-    <div class="product-card" style="border:none;background:none">
-      <div class="info">
-        <span class="tag">Passo 1</span>
-        <h3>Escolha o produto</h3>
-        <p style="color:var(--white-dim)">Case ou pasta, no acabamento padrão ou personalizado.</p>
-      </div>
+  <div class="steps">
+    <div class="step">
+      <span class="tag">Passo 1</span>
+      <h3>Escolha o produto</h3>
+      <p>Case ou pasta, no acabamento padrão ou personalizado.</p>
     </div>
-    <div class="product-card" style="border:none;background:none">
-      <div class="info">
-        <span class="tag">Passo 2</span>
-        <h3>Personalize</h3>
-        <p style="color:var(--white-dim)">Adicione um nome ou texto e escolha entre preto, marrom ou quadriculado.</p>
-      </div>
+    <div class="step">
+      <span class="tag">Passo 2</span>
+      <h3>Personalize</h3>
+      <p>Adicione um nome ou texto e escolha entre preto, marrom ou quadriculado.</p>
     </div>
-    <div class="product-card" style="border:none;background:none">
-      <div class="info">
-        <span class="tag">Passo 3</span>
-        <h3>Receba em casa</h3>
-        <p style="color:var(--white-dim)">Calculamos o frete PAC ou SEDEX direto no seu CEP, com rastreio completo.</p>
-      </div>
+    <div class="step">
+      <span class="tag">Passo 3</span>
+      <h3>Receba em casa</h3>
+      <p>Calculamos o frete PAC ou SEDEX direto no seu CEP, com rastreio completo.</p>
     </div>
   </div>
 </section>

@@ -12,8 +12,8 @@
 <div id="site-header"></div>
 
 <div class="form-card text-center">
-  <h1>Pedido recebido 🎉</h1>
-  <p class="sub">Estamos confirmando o pagamento. Isso costuma levar poucos segundos.
+  <h1 id="confirmacao-titulo">Pedido recebido 🎉</h1>
+  <p class="sub" id="confirmacao-status">Estamos confirmando o pagamento via Pix. Isso costuma levar poucos segundos.
   Você pode acompanhar o status na sua área de pedidos.</p>
   <p class="sub" style="margin-top:12px">
     ⏳ Depois que o pagamento for confirmado, sua peça entra em produção.
@@ -36,6 +36,39 @@
 <script src="js/layout.js"></script>
 <script>
   renderLayout("");
+
+  // Acompanha o pedido em tempo real e avisa o cliente assim que o
+  // webhook confirmar o Pix (a InfinitePay devolve ?order_nsu=... e nós
+  // também mandamos ?pedido=... na redirect_url).
+  (async () => {
+    const params = new URLSearchParams(location.search);
+    const pedidoId = params.get("pedido") || params.get("order_nsu");
+    if (!pedidoId) return;
+
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const titulo = document.getElementById("confirmacao-titulo");
+    const status = document.getElementById("confirmacao-status");
+
+    db.collection("pedidos").doc(pedidoId).onSnapshot(doc => {
+      if (!doc.exists) return;
+      const p = doc.data();
+      if (["pago", "em_producao", "enviado", "entregue"].includes(p.status)) {
+        titulo.textContent = "Pagamento confirmado ✅";
+        status.textContent = `Recebemos seu Pix do pedido #${doc.id.slice(0, 8)}. ` +
+          "Enviamos a confirmação para o seu e-mail e sua peça já entrou na fila de produção.";
+      } else if (p.status === "pago_cartao") {
+        titulo.textContent = "Pedido será cancelado";
+        status.textContent = "Identificamos um pagamento com cartão de crédito, mas nossa loja aceita somente Pix. " +
+          "Por isso este pedido será cancelado e o valor estornado. Dúvidas? Fale com a gente pelo WhatsApp" +
+          (window.APP_CONFIG?.WHATSAPP ? ": wa.me/" + String(window.APP_CONFIG.WHATSAPP).replace(/\D/g, "") : ".");
+      } else if (p.status === "pago_divergente") {
+        titulo.textContent = "Pagamento em análise";
+        status.textContent = "Recebemos seu pagamento e estamos conferindo o valor. Em breve atualizaremos o status do pedido.";
+      }
+    }, err => console.warn("Não foi possível acompanhar o pedido:", err));
+  })();
 </script>
 </body>
 </html>
