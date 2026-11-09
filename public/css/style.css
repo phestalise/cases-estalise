@@ -1821,3 +1821,8 @@ html.intro-feita .hero > * { animation: none; }
 }
 .prazo-resumo strong { color: var(--white); }
 .bf-economia strong { white-space: nowrap; }
+
+/* O atributo HTML "hidden" sempre esconde, mesmo em elementos com display
+   definido no CSS (ex.: .auth-gate tem display:flex e continuava visível,
+   mostrando "Faça login" para quem já estava logado). */
+[hidden] { display: none !important; }
