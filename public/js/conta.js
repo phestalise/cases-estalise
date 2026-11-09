@@ -24,6 +24,8 @@ async function initConta() {
   document.getElementById("perfil-nome").textContent = perfil?.nome_completo || user.email;
   document.getElementById("perfil-email").textContent = user.email;
 
+  preencherMeusDados(user, perfil || {});
+
   const listaEl = document.getElementById("lista-pedidos");
 
   // Busca pedidos (com tratamento de erro para não travar a tela
@@ -79,4 +81,122 @@ function calcularPrevisao(pedido) {
   dataPrevisao.setDate(dataPrevisao.getDate() + DIAS_PRODUCAO);
 
   return dataPrevisao.toLocaleDateString("pt-BR");
+}
+
+
+// =====================================================
+// MEUS DADOS (editar nome/telefone, trocar e-mail e senha)
+// A senha nunca é exibida; trocar e-mail/senha exige a senha atual.
+// =====================================================
+function msgConta(id, texto, tipo) {
+  const el = document.getElementById(id);
+  if (!el) return alert(texto);
+  el.textContent = texto;
+  el.className = `form-msg ${tipo} show`;
+}
+
+function erroAuthConta(erro) {
+  const mapa = {
+    "auth/wrong-password": "Senha atual incorreta.",
+    "auth/invalid-credential": "Senha atual incorreta.",
+    "auth/invalid-login-credentials": "Senha atual incorreta.",
+    "auth/too-many-requests": "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
+    "auth/weak-password": "A nova senha precisa ter pelo menos 6 caracteres.",
+    "auth/email-already-in-use": "Esse e-mail já é usado por outra conta.",
+    "auth/invalid-email": "E-mail inválido.",
+    "auth/requires-recent-login": "Por segurança, saia e entre de novo antes de fazer essa alteração.",
+    "auth/operation-not-allowed": "Troca de e-mail indisponível no momento. Fale com a gente pelo WhatsApp."
+  };
+  return mapa[erro?.code] || "Não foi possível concluir. Tente novamente.";
+}
+
+async function reautenticarConta(senhaAtual) {
+  const user = auth.currentUser;
+  const credencial = firebase.auth.EmailAuthProvider.credential(user.email, senhaAtual);
+  await user.reauthenticateWithCredential(credencial);
+  return user;
+}
+
+function formatarCpfConta(cpf) {
+  const d = String(cpf || "").replace(/\D/g, "");
+  return d.length === 11 ? d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : (cpf || "");
+}
+
+function preencherMeusDados(user, perfil) {
+  document.getElementById("meus-nome").value = perfil.nome_completo || "";
+  document.getElementById("meus-telefone").value = perfil.telefone || "";
+  document.getElementById("meus-cpf").value = formatarCpfConta(perfil.cpf);
+  document.getElementById("meus-email").value = user.email || "";
+
+  // Se o e-mail foi trocado (depois de confirmar o link), atualiza o cadastro
+  if (user.email && perfil.email && perfil.email !== user.email) {
+    db.collection("usuarios").doc(user.uid).update({ email: user.email }).catch(() => {});
+  }
+}
+
+async function salvarMeusDados() {
+  const user = auth.currentUser;
+  const nome = document.getElementById("meus-nome").value.trim();
+  const telefone = document.getElementById("meus-telefone").value.trim();
+  if (nome.length < 3) return msgConta("meus-dados-msg", "Informe seu nome completo.", "error");
+  const digitosTel = telefone.replace(/\D/g, "");
+  if (telefone && (digitosTel.length < 10 || digitosTel.length > 11)) {
+    return msgConta("meus-dados-msg", "Telefone inválido. Use DDD + número.", "error");
+  }
+  try {
+    await db.collection("usuarios").doc(user.uid).update({ nome_completo: nome, telefone });
+    document.getElementById("perfil-nome").textContent = nome;
+    msgConta("meus-dados-msg", "Dados atualizados.", "success");
+  } catch (erro) {
+    console.error(erro);
+    msgConta("meus-dados-msg", "Erro ao salvar seus dados. Tente novamente.", "error");
+  }
+}
+
+async function trocarMeuEmail() {
+  const novo = document.getElementById("meus-novo-email").value.trim();
+  const senha = document.getElementById("meus-senha-email").value;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novo)) return msgConta("meus-email-msg", "Informe um e-mail válido.", "error");
+  if (!senha) return msgConta("meus-email-msg", "Informe sua senha atual para confirmar.", "error");
+  if (novo.toLowerCase() === (auth.currentUser.email || "").toLowerCase()) return msgConta("meus-email-msg", "Esse já é o seu e-mail.", "error");
+  try {
+    const user = await reautenticarConta(senha);
+    await user.verifyBeforeUpdateEmail(novo);
+    document.getElementById("meus-senha-email").value = "";
+    msgConta("meus-email-msg", `Enviamos um link de confirmação para ${novo}. O e-mail só muda depois que você clicar nele.`, "success");
+  } catch (erro) {
+    console.error(erro);
+    msgConta("meus-email-msg", erroAuthConta(erro), "error");
+  }
+}
+
+async function trocarMinhaSenha() {
+  const atual = document.getElementById("minha-senha-atual").value;
+  const nova = document.getElementById("minha-senha-nova").value;
+  const nova2 = document.getElementById("minha-senha-nova2").value;
+  if (!atual) return msgConta("minha-senha-msg", "Informe sua senha atual.", "error");
+  if (nova.length < 6) return msgConta("minha-senha-msg", "A nova senha precisa ter pelo menos 6 caracteres.", "error");
+  if (nova !== nova2) return msgConta("minha-senha-msg", "As duas senhas novas não são iguais.", "error");
+  if (nova === atual) return msgConta("minha-senha-msg", "A nova senha precisa ser diferente da atual.", "error");
+  try {
+    const user = await reautenticarConta(atual);
+    await user.updatePassword(nova);
+    ["minha-senha-atual", "minha-senha-nova", "minha-senha-nova2"].forEach(id => document.getElementById(id).value = "");
+    msgConta("minha-senha-msg", "Senha alterada com sucesso.", "success");
+  } catch (erro) {
+    console.error(erro);
+    msgConta("minha-senha-msg", erroAuthConta(erro), "error");
+  }
+}
+
+async function enviarLinkMinhaSenha() {
+  const email = auth.currentUser?.email;
+  if (!email) return;
+  try {
+    await auth.sendPasswordResetEmail(email);
+    msgConta("minha-senha-msg", `Enviamos um link para ${email} para você criar uma nova senha.`, "success");
+  } catch (erro) {
+    console.error(erro);
+    msgConta("minha-senha-msg", erroAuthConta(erro), "error");
+  }
 }

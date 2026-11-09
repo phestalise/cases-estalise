@@ -1826,3 +1826,7 @@ html.intro-feita .hero > * { animation: none; }
    definido no CSS (ex.: .auth-gate tem display:flex e continuava visível,
    mostrando "Faça login" para quem já estava logado). */
 [hidden] { display: none !important; }
+
+/* Minha conta: 3 quadros de dados */
+.conta-dados { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1000px) { .conta-dados { grid-template-columns: 1fr; } }

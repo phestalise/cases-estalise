@@ -43,6 +43,45 @@
 
   <hr class="stitch" />
 
+  <h2 style="margin-bottom:20px">Meus dados</h2>
+  <div class="perfil-grid conta-dados">
+    <div class="summary-box">
+      <h3 style="margin-bottom:16px">Dados pessoais</h3>
+      <div class="form-group"><label>Nome completo</label><input id="meus-nome" class="field" autocomplete="name" /></div>
+      <div class="flex gap-8" style="flex-wrap:wrap">
+        <div class="form-group" style="flex:1;min-width:150px"><label>Telefone</label><input id="meus-telefone" class="field" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999" /></div>
+        <div class="form-group" style="flex:1;min-width:150px"><label>CPF</label><input id="meus-cpf" class="field" disabled /></div>
+      </div>
+      <button class="btn btn-primary" onclick="salvarMeusDados()">Salvar dados</button>
+      <p id="meus-dados-msg" class="form-msg"></p>
+    </div>
+
+    <div class="summary-box">
+      <h3 style="margin-bottom:16px">E-mail</h3>
+      <div class="form-group"><label>E-mail atual</label><input id="meus-email" class="field" disabled /></div>
+      <div class="form-group"><label>Novo e-mail</label><input id="meus-novo-email" type="email" class="field" autocomplete="email" placeholder="novo@email.com" /></div>
+      <div class="form-group"><label>Senha atual (para confirmar)</label><input id="meus-senha-email" type="password" class="field" autocomplete="current-password" /></div>
+      <button class="btn btn-outline" onclick="trocarMeuEmail()">Trocar e-mail</button>
+      <p id="meus-email-msg" class="form-msg"></p>
+    </div>
+
+    <div class="summary-box">
+      <h3 style="margin-bottom:16px">Senha</h3>
+      <div class="form-group"><label>Senha atual</label><input id="minha-senha-atual" type="password" class="field" autocomplete="current-password" /></div>
+      <div class="flex gap-8" style="flex-wrap:wrap">
+        <div class="form-group" style="flex:1;min-width:150px"><label>Nova senha</label><input id="minha-senha-nova" type="password" class="field" autocomplete="new-password" /></div>
+        <div class="form-group" style="flex:1;min-width:150px"><label>Repita a nova senha</label><input id="minha-senha-nova2" type="password" class="field" autocomplete="new-password" /></div>
+      </div>
+      <div class="flex gap-8" style="flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="trocarMinhaSenha()">Trocar senha</button>
+        <button class="btn btn-ghost" onclick="enviarLinkMinhaSenha()">Esqueci minha senha</button>
+      </div>
+      <p id="minha-senha-msg" class="form-msg"></p>
+    </div>
+  </div>
+
+  <hr class="stitch" />
+
   <h2 style="margin-bottom:20px">Meus pedidos</h2>
   <p style="color:var(--gray); margin-top:-12px; margin-bottom:20px; font-size:14px">
     ⏳ Prazo de produção: até 15 dias úteis após a confirmação do pagamento.
