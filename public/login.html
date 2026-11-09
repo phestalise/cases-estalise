@@ -71,6 +71,14 @@
 <script src="js/auth.js"></script>
 <script>
   renderLayout("");
+
+  // Já está logado? Não pede login de novo: segue para o destino.
+  getCurrentUser().then((user) => {
+    if (!user) return;
+    const destino = new URLSearchParams(location.search).get("redirect") || "conta.html";
+    // só aceita páginas do próprio site
+    location.replace(/^[\w-]+\.html([?#].*)?$/.test(destino) ? destino : "conta.html");
+  });
 </script>
 </body>
 </html>

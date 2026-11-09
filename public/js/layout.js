@@ -7,39 +7,37 @@ async function renderLayout(paginaAtiva) {
   let logoUrl = "assets/ESTALISE.png";
   let nomeMarca = "Cases Estalise";
   let logado = false;
+  const repintar = () => pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado);
 
-  // Busca configurações da loja e login em paralelo.
-  const dados = Promise.all([
-    db.collection("configuracoes_loja").doc("global").get()
-      .then(doc => (doc.exists ? doc.data() : null))
-      .catch(e => { console.warn("Não foi possível carregar configurações da loja:", e); return null; }),
-    getCurrentUser().catch(() => null)
-  ]);
+  // Login e configurações da loja são buscados SEPARADAMENTE: o header
+  // atualiza assim que o login é confirmado, sem esperar o Firestore
+  // (antes, um Firestore lento deixava o ícone apontando para "Entrar"
+  // mesmo com o cliente logado).
+  const promUsuario = getCurrentUser()
+    .then(user => { logado = !!user; repintar(); })
+    .catch(() => {});
 
-  // Na intro a cortina cobre a tela: espera os dados (até 900 ms) para
-  // desenhar o header uma vez só e a animação não reiniciar no meio.
-  // Fora da intro, desenha na hora com os valores padrão.
-  let resultado = null;
-  dados.then(r => { resultado = r; });
+  const promConfig = db.collection("configuracoes_loja").doc("global").get()
+    .then(doc => {
+      const config = doc.exists ? doc.data() : null;
+      if (config) {
+        logoUrl = config.logo_url || logoUrl;
+        nomeMarca = config.nome_marca || nomeMarca;
+      }
+      repintar();
+    })
+    .catch(e => console.warn("Não foi possível carregar configurações da loja:", e));
 
+  // Na intro a cortina cobre a tela: espera um pouco (até 900 ms) para o
+  // header já nascer com os dados certos e a animação não reiniciar.
   if (document.documentElement.classList.contains("intro")) {
-    await Promise.race([dados, new Promise(r => setTimeout(r, 900))]);
+    await Promise.race([
+      Promise.all([promUsuario, promConfig]),
+      new Promise(r => setTimeout(r, 900))
+    ]);
   }
 
-  const aplicarDados = ([config, user]) => {
-    if (config) {
-      logoUrl = config.logo_url || logoUrl;
-      nomeMarca = config.nome_marca || nomeMarca;
-    }
-    logado = !!user;
-  };
-
-  // Desenha agora (com os dados, se já chegaram) e de novo quando chegarem.
-  if (resultado) aplicarDados(resultado);
-  pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado);
-
-  aplicarDados(await dados);
-  pintarLayout(paginaAtiva, logoUrl, nomeMarca, logado);
+  repintar();
 }
 
 let assinaturaLayout = null;

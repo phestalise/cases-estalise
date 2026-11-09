@@ -37,7 +37,7 @@ async function handleCadastro(event) {
     msgEl.className = "form-msg success show";
 
     setTimeout(() => {
-      const redirect = new URLSearchParams(window.location.search).get("redirect") || "index.html";
+      const redirect = destinoSeguro(new URLSearchParams(window.location.search).get("redirect"));
       window.location.href = redirect;
     }, 1500);
 
@@ -65,7 +65,7 @@ async function handleLogin(event) {
   try {
     await auth.signInWithEmailAndPassword(email, senha);
 
-    const redirect = new URLSearchParams(window.location.search).get("redirect") || "index.html";
+    const redirect = destinoSeguro(new URLSearchParams(window.location.search).get("redirect"));
     window.location.href = redirect;
 
   } catch (error) {
@@ -118,4 +118,9 @@ function traduzErroAuth(error) {
   };
 
   return erros[code] || error.message || "Ocorreu um erro.";
+}
+
+// Só redireciona para páginas do próprio site (evita links que levam a sites falsos)
+function destinoSeguro(destino) {
+  return /^[\w-]+\.html([?#].*)?$/.test(destino || "") ? destino : "index.html";
 }
