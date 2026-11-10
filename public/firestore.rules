@@ -46,7 +46,22 @@ service cloud.firestore {
       allow read: if request.auth != null && 
         (resource.data.user_id == request.auth.uid || 
          get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true);
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      // O cliente só cria o pedido "aguardando pagamento". Status pago,
+      // dados de pagamento etc. só são gravados pelo servidor (Admin SDK)
+      // ou pelo admin. Sem isso, qualquer usuário logado poderia criar
+      // pelo console do navegador um pedido já marcado como "pago".
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+             'user_id', 'endereco', 'itens', 'subtotal', 'desconto', 'cupom',
+             'valor_frete', 'total', 'metodo_envio', 'status', 'pagamento', 'created_at'
+           ])
+        && request.resource.data.status == 'aguardando_pagamento'
+        && request.resource.data.pagamento.keys().hasOnly(['status', 'valor'])
+        && request.resource.data.pagamento.status == 'pendente'
+        && request.resource.data.itens is list
+        && request.resource.data.itens.size() > 0
+        && request.resource.data.itens.size() <= 50;
       allow update: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
     }
   }

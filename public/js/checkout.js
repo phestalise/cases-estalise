@@ -320,7 +320,11 @@ window.finalizarPedido = async function (event) {
       `${window.APP_CONFIG.FUNCTIONS_URL}/infinitypay-checkout`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // ID token do Firebase: o back confere se o pedido é deste usuário
+          Authorization: `Bearer ${await user.getIdToken()}`
+        },
         body: JSON.stringify({
           id: pedidoRef.id,
           itens,
