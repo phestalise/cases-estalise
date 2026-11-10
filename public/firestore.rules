@@ -25,10 +25,14 @@ service cloud.firestore {
     // mas NUNCA pode se tornar admin sozinho (só outro admin ou o console do Firebase).
     match /usuarios/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
+      // CPF (cpf / cpf_enc / cpf_final) só é gravado pela API (Admin SDK),
+      // que criptografa. O navegador nunca grava esses campos.
       allow create: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.get('is_admin', false) == false;
+        && request.resource.data.get('is_admin', false) == false
+        && !request.resource.data.keys().hasAny(['cpf', 'cpf_enc', 'cpf_final']);
       allow update: if request.auth != null && request.auth.uid == userId
-        && request.resource.data.get('is_admin', false) == resource.data.get('is_admin', false);
+        && request.resource.data.get('is_admin', false) == resource.data.get('is_admin', false)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['cpf', 'cpf_enc', 'cpf_final']);
       allow delete: if request.auth != null && request.auth.uid == userId;
       // Admin pode ler todos os usuários
       allow read: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;

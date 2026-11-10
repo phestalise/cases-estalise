@@ -1,4 +1,36 @@
 // js/auth.js
+
+// =========================================================
+// CPF: nunca é gravado direto no Firestore pelo navegador.
+// A API (api-case /usuario-dados) criptografa e salva.
+// =========================================================
+async function salvarCpfNaApi(cpf) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Faça login para continuar.");
+  const resp = await fetch(`${window.APP_CONFIG.FUNCTIONS_URL}/usuario-dados`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${await user.getIdToken()}`
+    },
+    body: JSON.stringify({ cpf })
+  });
+  const dados = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(dados.error || "Não foi possível salvar o CPF.");
+  return dados.cpf_mascarado;
+}
+
+// CPF do próprio usuário logado (descriptografado pela API), ou null.
+async function lerMeuCpfNaApi() {
+  const user = auth.currentUser;
+  if (!user) return null;
+  const resp = await fetch(`${window.APP_CONFIG.FUNCTIONS_URL}/usuario-dados`, {
+    headers: { Authorization: `Bearer ${await user.getIdToken()}` }
+  });
+  const dados = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(dados.error || "Não foi possível ler o CPF.");
+  return dados.cpf || null;
+}
 async function handleCadastro(event) {
   event.preventDefault();
   const msgEl = document.getElementById("auth-msg");
@@ -24,22 +56,40 @@ async function handleCadastro(event) {
     const userCredential = await auth.createUserWithEmailAndPassword(email, senha);
     const user = userCredential.user;
 
+    // O perfil é criado SEM o CPF. Precisa vir antes da API: o set() do
+    // cliente substitui o documento inteiro e apagaria o cpf_enc.
     await db.collection("usuarios").doc(user.uid).set({
       nome_completo: nome,
-      cpf,
       telefone,
       email,
       is_admin: false,
       created_at: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    msgEl.textContent = "Conta criada com sucesso!";
-    msgEl.className = "form-msg success show";
+    // O CPF vai pela API, que grava criptografado (cpf_enc + cpf_final).
+    let cpfSalvo = false;
+    for (let tentativa = 0; tentativa < 2 && !cpfSalvo; tentativa++) {
+      try {
+        await salvarCpfNaApi(cpf);
+        cpfSalvo = true;
+      } catch (erroCpf) {
+        console.warn("Falha ao salvar CPF:", erroCpf.message);
+      }
+    }
+
+    if (cpfSalvo) {
+      msgEl.textContent = "Conta criada com sucesso!";
+      msgEl.className = "form-msg success show";
+    } else {
+      // A conta já existe; o CPF pode ser informado depois em "Minha conta".
+      msgEl.textContent = "Conta criada! Não conseguimos salvar seu CPF agora. Informe-o depois em \"Minha conta\".";
+      msgEl.className = "form-msg error show";
+    }
 
     setTimeout(() => {
       const redirect = destinoSeguro(new URLSearchParams(window.location.search).get("redirect"));
       window.location.href = redirect;
-    }, 1500);
+    }, cpfSalvo ? 1500 : 4000);
 
   } catch (error) {
     console.error(error);

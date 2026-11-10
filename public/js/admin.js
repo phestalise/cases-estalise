@@ -190,6 +190,11 @@ async function carregarPedidosAdmin() {
       return;
     }
 
+    // CPFs de todos os clientes da lista de uma vez (se a API falhar,
+    // a lista abre assim mesmo, mostrando só o final do CPF).
+    const cpfs = await buscarCpfsAdmin(docs.map(doc => doc.data().user_id))
+      .catch(err => { console.warn("CPFs indisponíveis:", err.message); return {}; });
+
     const pedidosHtml = [];
     for (const doc of docs) {
       const p = doc.data();
@@ -214,7 +219,7 @@ async function carregarPedidosAdmin() {
           <div class="pedido-detalhes">
             <div>
               <strong>Cliente</strong>
-              <p>${escapeHtml(cliente.nome_completo || "-")}<br>CPF: ${escapeHtml(cliente.cpf || "-")}<br>Tel: ${escapeHtml(cliente.telefone || "-")}</p>
+              <p>${escapeHtml(cliente.nome_completo || "-")}<br>CPF: ${escapeHtml(cpfParaExibir(cpfs[p.user_id], cliente))}<br>Tel: ${escapeHtml(cliente.telefone || "-")}</p>
               <strong>Endereço</strong>
               <p>${escapeHtml(endereco.logradouro || "")}, ${escapeHtml(endereco.numero || "")} — ${escapeHtml(endereco.bairro || "")}, ${escapeHtml(endereco.cidade || "")}/${escapeHtml(endereco.uf || "")} — CEP: ${escapeHtml(endereco.cep || "")}</p>
             </div>
@@ -442,6 +447,46 @@ function preencherFiltroStatusExport() {
 }
 document.addEventListener("DOMContentLoaded", preencherFiltroStatusExport);
 
+// =========================================================
+// CPF (fica criptografado no banco; só a API descriptografa)
+// =========================================================
+const cacheCpfs = {};
+
+// Busca os CPFs de vários clientes na API, 100 por chamada. Os já buscados
+// ficam em memória, para recarregar a lista sem gastar o limite da API.
+// Só funciona para admin (a API confere o is_admin pelo token).
+async function buscarCpfsAdmin(userIds) {
+  const uids = [...new Set(userIds.filter(Boolean))];
+  const faltando = uids.filter(uid => !(uid in cacheCpfs));
+
+  if (faltando.length) {
+    const token = await auth.currentUser.getIdToken();
+    for (let i = 0; i < faltando.length; i += 100) {
+      const lote = faltando.slice(i, i + 100);
+      const resp = await fetch(
+        `${window.APP_CONFIG.FUNCTIONS_URL}/usuario-dados?uids=${encodeURIComponent(lote.join(","))}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const dados = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(dados.error || "Falha ao buscar CPFs dos clientes.");
+      Object.assign(cacheCpfs, dados.cpfs || {});
+    }
+  }
+
+  const resultado = {};
+  uids.forEach(uid => { resultado[uid] = cacheCpfs[uid] ?? null; });
+  return resultado;
+}
+
+// Para exibir na tela: CPF completo se a API devolveu; senão o campo antigo;
+// senão só o final mascarado (cpf_final); senão "-".
+function cpfParaExibir(cpfApi, perfil = {}) {
+  if (cpfApi) return cpfApi;
+  if (perfil.cpf) return perfil.cpf;
+  if (perfil.cpf_final) return `***.***.***-${perfil.cpf_final}`;
+  return "-";
+}
+
 // Retorna a lista de IDs exportados (array vazio se não havia pedidos),
 // ou null em caso de erro. Pedidos arquivados (zerados) não entram.
 // Com { todos: true } ignora o filtro de status (usado ao zerar).
@@ -461,11 +506,18 @@ async function exportarPedidosExcel(opcoes = {}) {
     const linhas = [];
     const idsExportados = [];
 
-    for (const doc of snapshot.docs) {
+    const docsFiltrados = snapshot.docs.filter(doc => {
       const p = doc.data();
-      if (p.arquivado === true) continue;
+      if (p.arquivado === true) return false;
       const statusNormalizado = p.status === "pendente_pagamento" ? "aguardando_pagamento" : p.status;
-      if (filtro && statusNormalizado !== filtro) continue;
+      return !filtro || statusNormalizado === filtro;
+    });
+
+    // O CPF fica criptografado no banco: busca todos de uma vez na API.
+    const cpfs = await buscarCpfsAdmin(docsFiltrados.map(doc => doc.data().user_id));
+
+    for (const doc of docsFiltrados) {
+      const p = doc.data();
       idsExportados.push(doc.id);
 
       const c = await buscarCliente(p.user_id);
@@ -484,7 +536,7 @@ async function exportarPedidosExcel(opcoes = {}) {
         "Data": p.created_at?.toDate ? p.created_at.toDate().toLocaleString("pt-BR") : "",
         "Status": STATUS_LABEL_ADMIN[p.status] || p.status || "",
         "Cliente": c.nome_completo || "",
-        "CPF": c.cpf || "",
+        "CPF": cpfs[p.user_id] || c.cpf || "",
         "Telefone": c.telefone || "",
         "CEP": e.cep || "",
         "Endereço": [e.logradouro, e.numero, e.complemento].filter(Boolean).join(", "),
@@ -523,7 +575,7 @@ async function exportarPedidosExcel(opcoes = {}) {
     return idsExportados;
   } catch (erro) {
     console.error("Erro ao exportar pedidos:", erro);
-    alert("Erro ao exportar pedidos.");
+    alert("Erro ao exportar pedidos." + (erro?.message ? "\n" + erro.message : ""));
     return null;
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = textoOriginal; }
@@ -748,7 +800,11 @@ async function carregarPerfil() {
 
     document.getElementById("perfil-nome").value = p.nome_completo || "";
     document.getElementById("perfil-telefone").value = p.telefone || "";
-    document.getElementById("perfil-cpf").value = p.cpf || "";
+    const meuCpf = await buscarCpfsAdmin([user.uid])
+      .then(r => r[user.uid])
+      .catch(() => null);
+    const cpfExibido = cpfParaExibir(meuCpf, p);
+    document.getElementById("perfil-cpf").value = cpfExibido === "-" ? "" : cpfExibido;
     document.getElementById("perfil-email").value = user.email || "";
 
     const criado = user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString("pt-BR") : "-";

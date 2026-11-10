@@ -125,13 +125,42 @@ function formatarCpfConta(cpf) {
 function preencherMeusDados(user, perfil) {
   document.getElementById("meus-nome").value = perfil.nome_completo || "";
   document.getElementById("meus-telefone").value = perfil.telefone || "";
-  document.getElementById("meus-cpf").value = formatarCpfConta(perfil.cpf);
+  preencherMeuCpf(perfil);
   document.getElementById("meus-email").value = user.email || "";
 
   // Se o e-mail foi trocado (depois de confirmar o link), atualiza o cadastro
   if (user.email && perfil.email && perfil.email !== user.email) {
     db.collection("usuarios").doc(user.uid).update({ email: user.email }).catch(() => {});
   }
+}
+
+// CPF salvo -> campo travado (mostra o final e depois o CPF completo vindo da API).
+// Sem CPF (ex.: falhou no cadastro) -> campo liberado para informar uma vez.
+function preencherMeuCpf(perfil) {
+  const campo = document.getElementById("meus-cpf");
+  campo.oninput = null;
+
+  if (perfil.cpf) {
+    // Cadastro antigo, ainda não migrado.
+    campo.value = formatarCpfConta(perfil.cpf);
+    campo.disabled = true;
+    return;
+  }
+
+  if (perfil.cpf_enc || perfil.cpf_final) {
+    campo.value = perfil.cpf_final ? `***.***.***-${perfil.cpf_final}` : "";
+    campo.disabled = true;
+    lerMeuCpfNaApi()
+      .then(cpf => { if (cpf) campo.value = formatarCpfConta(cpf); })
+      .catch(err => console.warn("CPF indisponível:", err.message));
+    return;
+  }
+
+  campo.value = "";
+  campo.disabled = false;
+  campo.placeholder = "Informe seu CPF";
+  campo.inputMode = "numeric";
+  campo.oninput = () => { campo.value = formatarCPF(campo.value); };
 }
 
 async function salvarMeusDados() {
@@ -143,14 +172,33 @@ async function salvarMeusDados() {
   if (telefone && (digitosTel.length < 10 || digitosTel.length > 11)) {
     return msgConta("meus-dados-msg", "Telefone inválido. Use DDD + número.", "error");
   }
+  // CPF só é enviado se o campo estiver liberado (conta ainda sem CPF).
+  const campoCpf = document.getElementById("meus-cpf");
+  const cpf = campoCpf.disabled ? "" : campoCpf.value.replace(/\D/g, "");
+  if (cpf && !validarCPF(cpf)) {
+    return msgConta("meus-dados-msg", "CPF inválido. Verifique os números digitados.", "error");
+  }
+
   try {
     await db.collection("usuarios").doc(user.uid).update({ nome_completo: nome, telefone });
     document.getElementById("perfil-nome").textContent = nome;
-    msgConta("meus-dados-msg", "Dados atualizados.", "success");
   } catch (erro) {
     console.error(erro);
-    msgConta("meus-dados-msg", "Erro ao salvar seus dados. Tente novamente.", "error");
+    return msgConta("meus-dados-msg", "Erro ao salvar seus dados. Tente novamente.", "error");
   }
+
+  if (cpf) {
+    try {
+      await salvarCpfNaApi(cpf);
+      campoCpf.value = formatarCpfConta(cpf);
+      campoCpf.disabled = true;
+      campoCpf.oninput = null;
+    } catch (erro) {
+      return msgConta("meus-dados-msg", `Dados salvos, mas o CPF não: ${erro.message}`, "error");
+    }
+  }
+
+  msgConta("meus-dados-msg", "Dados atualizados.", "success");
 }
 
 async function trocarMeuEmail() {
