@@ -67,6 +67,13 @@ service cloud.firestore {
         && request.resource.data.itens.size() > 0
         && request.resource.data.itens.size() <= 50;
       allow update: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
+      // (mantido da versão em produção) admin pode apagar pedidos
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.is_admin == true;
+    }
+
+    // (mantido da versão em produção) qualquer outra coleção é bloqueada
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
