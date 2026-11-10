@@ -197,7 +197,7 @@ async function carregarPedidosAdmin() {
 
       const itensHtml = (p.itens || []).map(item => `
         <li>${escapeHtml(item.quantidade || 1)}x ${escapeHtml(item.nome || "Produto")} ${item.tipo ? `(${escapeHtml(item.tipo)})` : ""}
-        ${item.is_personalizado && item.personalizacao ? `— Personalizado: "${escapeHtml(item.personalizacao.texto_personalizado || "")}" Cor: ${escapeHtml(item.personalizacao.cor || "-")}` : " — Padrão"}
+        ${item.is_personalizado ? `— Personalizado: <strong>"${escapeHtml(textoPersonalizacao(item) || "-")}"</strong> Cor: ${escapeHtml(corPersonalizacao(item) || "-")}` : " — Padrão"}
         — ${formatarMoeda(item.preco_unitario || 0)}</li>`).join("");
 
       const endereco = p.endereco || {};
@@ -473,8 +473,8 @@ async function exportarPedidosExcel(opcoes = {}) {
       const itens = (p.itens || []).map(item => {
         let txt = `${item.quantidade || 1}x ${item.nome || "Produto"}`;
         if (item.tipo) txt += ` (${item.tipo})`;
-        if (item.is_personalizado && item.personalizacao) {
-          txt += ` — Personalizado: "${item.personalizacao.texto_personalizado || ""}" Cor: ${item.personalizacao.cor || "-"}`;
+        if (item.is_personalizado) {
+          txt += ` — Personalizado: "${textoPersonalizacao(item) || ""}" Cor: ${corPersonalizacao(item) || "-"}`;
         }
         return txt;
       }).join(" | ");
@@ -910,4 +910,15 @@ async function removerAdmin(uid, nome) {
       ? "Sem permissão. Publique as novas regras do Firestore (firestore.rules) no console do Firebase."
       : "Erro ao remover acesso.");
   }
+}
+
+
+// O carrinho salva a personalização direto no item (texto_personalizado / cor).
+// Mantém compatibilidade com o formato antigo (item.personalizacao.*).
+function textoPersonalizacao(item) {
+  return item.texto_personalizado || item.personalizacao?.texto_personalizado || "";
+}
+
+function corPersonalizacao(item) {
+  return item.cor || item.personalizacao?.cor || "";
 }
